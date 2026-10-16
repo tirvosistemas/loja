@@ -38,7 +38,7 @@ export function Markdown({ content, className }: { content: string | null | unde
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let para: string[] = [];
-  let list: { ordered: boolean; items: string[] } | null = null;
+  let list = null as { ordered: boolean; items: string[] } | null;
   let quote: string[] = [];
   const flush = () => {
     const k = `b${blocks.length}`;
@@ -86,16 +86,11 @@ export function Markdown({ content, className }: { content: string | null | unde
       continue;
     }
     if (ul || ol) {
-      if (para.length || quote.length) {
-        const keep = list;
-        list = null;
-        flush();
-        list = keep;
-      }
       const ordered = !!ol;
-      if (list && list.ordered !== ordered) flush();
-      if (!list) list = { ordered, items: [] };
-      list.items.push((ul?.[1] ?? ol?.[1] ?? "").trim());
+      if (para.length || quote.length || (list && list.ordered !== ordered)) flush();
+      const current = list ?? { ordered, items: [] };
+      current.items.push((ul?.[1] ?? ol?.[1] ?? "").trim());
+      list = current;
       continue;
     }
     if (q) {
