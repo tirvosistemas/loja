@@ -1,0 +1,439 @@
+// Tirvo — modelo de dados (MySQL 8)
+// Valores em dinheiro sempre em centavos (Int). Ex.: R$ 1.299,90 = 129990.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Acesso ao painel
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(ADMIN)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// Configurações em grupos (store, address, shipping, payment, integrations, push, seo, appearance).
+// O formato de cada grupo é validado em src/lib/settings.ts. Segredos ficam criptografados.
+model Setting {
+  key       String   @id @db.VarChar(64)
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────── Catálogo
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?    @db.Text
+  image       String?
+  icon        String? // nome de ícone lucide (ex.: "refrigerator")
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  sortOrder   Int        @default(0)
+  active      Boolean    @default(true)
+  featured    Boolean    @default(false) // aparece na grade da página inicial
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId])
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  logo      String?
+  active    Boolean   @default(true)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum Voltage {
+  V110
+  V220
+  BIVOLT
+  NA
+}
+
+model Product {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  sku              String?          @unique
+  shortDescription String?          @db.VarChar(500)
+  description      String?          @db.Text
+  status           ProductStatus    @default(ACTIVE)
+  priceCents       Int
+  compareAtCents   Int? // preço "de" (riscado)
+  costCents        Int?
+  stock            Int              @default(0)
+  trackStock       Boolean          @default(true)
+  allowBackorder   Boolean          @default(false)
+  lowStockAlert    Int              @default(3)
+  featured         Boolean          @default(false)
+  isNew            Boolean          @default(false) // lançamento
+  freeShipping     Boolean          @default(false)
+  voltage          Voltage?
+  variantLabel     String? // título das variações (ex.: "Voltagem", "Cor")
+  warrantyMonths   Int?
+  weightGrams      Int?
+  widthCm          Float?
+  heightCm         Float?
+  depthCm          Float?
+  color            String?
+  model            String? // modelo do fabricante
+  ean              String?
+  specs            Json? // [{ "label": "Capacidade", "value": "375 L" }]
+  tags             String?          @db.VarChar(500) // separadas por vírgula
+  videoUrl         String?
+  metaTitle        String?
+  metaDescription  String?          @db.VarChar(320)
+  soldCount        Int              @default(0)
+  viewCount        Int              @default(0)
+  ratingAvg        Float            @default(0)
+  ratingCount      Int              @default(0)
+  categoryId       String?
+  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId          String?
+  brand            Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  images           ProductImage[]
+  variants         ProductVariant[]
+  reviews          Review[]
+  orderItems       OrderItem[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status, featured])
+  @@index([categoryId])
+  @@index([brandId])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String // chave de upload (ex.: /uploads/products/2026/10/abc) ou URL completa
+  alt       String?
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id             String   @id @default(cuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String // ex.: "220V", "Inox · 110V"
+  sku            String?  @unique
+  priceCents     Int? // se vazio, usa o preço do produto
+  compareAtCents Int?
+  stock          Int      @default(0)
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  city      String?
+  rating    Int // 1 a 5
+  title     String?
+  comment   String   @db.Text
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId, approved])
+}
+
+// ─────────────────────────────── Marketing
+
+enum BannerPlacement {
+  HERO // carrossel do topo
+  STRIP // faixa no meio da página inicial
+}
+
+model Banner {
+  id           String          @id @default(cuid())
+  title        String
+  subtitle     String?         @db.VarChar(300)
+  eyebrow      String? // texto pequeno acima do título
+  ctaLabel     String?
+  href         String?
+  imageDesktop String
+  imageMobile  String?
+  theme        String          @default("dark") // "dark" = texto claro, "light" = texto escuro
+  align        String          @default("left") // left | center | right
+  placement    BannerPlacement @default(HERO)
+  active       Boolean         @default(true)
+  sortOrder    Int             @default(0)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+enum DiscountType {
+  PERCENT // value = porcentagem inteira (15 = 15%)
+  FIXED // value = centavos
+}
+
+enum DiscountScope {
+  ALL
+  CATEGORY
+  BRAND
+  PRODUCTS
+}
+
+// Promoção automática: muda o preço exibido dos produtos no escopo.
+model Promotion {
+  id          String        @id @default(cuid())
+  name        String
+  description String?       @db.VarChar(500)
+  type        DiscountType
+  value       Int
+  scope       DiscountScope @default(PRODUCTS)
+  categoryIds Json? // string[]
+  brandIds    Json? // string[]
+  productIds  Json? // string[]
+  flash       Boolean       @default(false) // oferta relâmpago (contagem regressiva)
+  badge       String? // ex.: "Black Friday"
+  priority    Int           @default(0)
+  active      Boolean       @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum CouponType {
+  PERCENT // value = porcentagem inteira
+  FIXED // value = centavos
+  FREE_SHIPPING
+}
+
+model Coupon {
+  id                  String        @id @default(cuid())
+  code                String        @unique // sempre MAIÚSCULO
+  description         String?       @db.VarChar(300)
+  type                CouponType
+  value               Int           @default(0)
+  minSubtotalCents    Int?
+  maxDiscountCents    Int?
+  usageLimit          Int?
+  usedCount           Int           @default(0)
+  perCustomerLimit    Int? // por telefone
+  firstOrderOnly      Boolean       @default(false)
+  stackWithPromotions Boolean       @default(true) // vale também para itens já em promoção
+  scope               DiscountScope @default(ALL)
+  categoryIds         Json?
+  brandIds            Json?
+  productIds          Json?
+  active              Boolean       @default(true)
+  startsAt            DateTime?
+  endsAt              DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PushSubscription {
+  id         String    @id @default(cuid())
+  endpoint   String    @unique @db.VarChar(768)
+  p256dh     String    @db.VarChar(255)
+  auth       String    @db.VarChar(255)
+  userAgent  String?   @db.VarChar(400)
+  failures   Int       @default(0)
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model PushCampaign {
+  id          String    @id @default(cuid())
+  title       String
+  body        String    @db.VarChar(500)
+  url         String?
+  image       String?
+  sentCount   Int       @default(0)
+  failedCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+}
+
+model Page {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  content      String   @db.Text // markdown simples
+  published    Boolean  @default(true)
+  showInFooter Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────── Pedidos
+
+enum DeliveryType {
+  DELIVERY // motoboy
+  PICKUP // retirada na loja
+}
+
+enum PaymentMethod {
+  ONLINE_STRIPE // cartão, Pix ou boleto pela Stripe
+  PIX_MANUAL // Pix para a chave da loja
+  PIX_ON_DELIVERY
+  CARD_ON_DELIVERY // maquininha na entrega
+  CASH_ON_DELIVERY // dinheiro na entrega
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  READY_FOR_PICKUP
+  DELIVERED
+  CANCELED
+}
+
+model Order {
+  id                    String        @id @default(cuid())
+  code                  String        @unique @db.VarChar(16) // ex.: TV7K2Q9
+  customerName          String
+  customerPhone         String        @db.VarChar(20) // só dígitos, com DDD
+  customerEmail         String?
+  customerDoc           String?       @db.VarChar(20) // CPF opcional
+  deliveryType          DeliveryType  @default(DELIVERY)
+  cep                   String?       @db.VarChar(9)
+  street                String?
+  number                String?       @db.VarChar(20)
+  complement            String?
+  neighborhood          String?
+  city                  String?
+  state                 String?       @db.VarChar(2)
+  reference             String?
+  lat                   Float?
+  lng                   Float?
+  distanceKm            Float?
+  subtotalCents         Int // soma dos itens já com promoções
+  discountCents         Int           @default(0) // cupom
+  pixDiscountCents      Int           @default(0)
+  shippingCents         Int           @default(0)
+  totalCents            Int
+  couponCode            String?
+  couponId              String?
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus @default(PENDING)
+  changeForCents        Int? // troco para
+  stripeSessionId       String?       @unique
+  stripePaymentIntentId String?
+  status                OrderStatus   @default(NEW)
+  notes                 String?       @db.Text
+  adminNotes            String?       @db.Text
+  whatsappMessage       String        @db.Text
+  ip                    String?       @db.VarChar(64)
+  userAgent             String?       @db.VarChar(400)
+  items                 OrderItem[]
+  events                OrderEvent[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerPhone])
+}
+
+model OrderItem {
+  id                     String   @id @default(cuid())
+  orderId                String
+  order                  Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId              String?
+  product                Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId              String?
+  name                   String
+  variantName            String?
+  sku                    String?
+  image                  String?
+  unitPriceCents         Int
+  originalUnitPriceCents Int
+  quantity               Int
+  totalCents             Int
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String // status | payment | note
+  status    String?
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ─────────────────────────────── Cache de mapas
+
+model GeoCache {
+  key       String   @id @db.VarChar(191) // provedor + endereço normalizado / rota
+  lat       Float?
+  lng       Float?
+  meters    Float?
+  label     String?  @db.VarChar(400)
+  createdAt DateTime @default(now())
+}
