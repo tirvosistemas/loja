@@ -5,7 +5,8 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "tirvo_admin";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 dias
 
-export type SessionPayload = { sub: string; name: string; email: string; role: "OWNER" | "ADMIN" | "EDITOR" };
+// pv: versão da senha (trecho do hash). Trocar a senha derruba as sessões abertas.
+export type SessionPayload = { sub: string; name: string; email: string; role: "OWNER" | "ADMIN" | "EDITOR"; pv?: string };
 
 function secretKey() {
   const s = process.env.AUTH_SECRET;
@@ -14,7 +15,7 @@ function secretKey() {
 }
 
 export async function signSession(payload: SessionPayload) {
-  return new SignJWT({ name: payload.name, email: payload.email, role: payload.role })
+  return new SignJWT({ name: payload.name, email: payload.email, role: payload.role, pv: payload.pv })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -32,6 +33,7 @@ export async function verifySession(token: string | undefined | null): Promise<S
       name: String(payload.name ?? ""),
       email: String(payload.email ?? ""),
       role: (payload.role as SessionPayload["role"]) ?? "EDITOR",
+      pv: typeof payload.pv === "string" ? payload.pv : undefined,
     };
   } catch {
     return null;

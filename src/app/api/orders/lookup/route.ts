@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const fieldErrors: Record<string, string> = {};
     for (const i of parsed.error.issues) {
       const k = String(i.path[0] ?? "");
-      if (k && !fieldErrors[k]) fieldErrors[k] = k === "code" ? "Informe o código do pedido." : i.message;
+      if (k && !fieldErrors[k]) fieldErrors[k] = k === "code" ? "Informe o código do pedido." : k === "phone" ? "Informe o WhatsApp com DDD." : i.message;
     }
     return settle(started, NextResponse.json({ error: "Confira os campos.", fieldErrors }, { status: 422 }));
   }

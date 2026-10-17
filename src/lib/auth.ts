@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { SESSION_COOKIE, SESSION_MAX_AGE, signSession, verifySession, type SessionPayload } from "./session";
@@ -25,8 +26,13 @@ export async function verifyCredentials(email: string, password: string) {
   return user && user.active && ok ? user : null;
 }
 
-export async function createSession(user: { id: string; name: string; email: string; role: SessionPayload["role"] }) {
-  const token = await signSession({ sub: user.id, name: user.name, email: user.email, role: user.role });
+/** Versão da senha guardada na sessão: muda quando o hash muda. */
+function passwordVersion(passwordHash: string) {
+  return createHash("sha256").update(passwordHash).digest("hex").slice(0, 16);
+}
+
+export async function createSession(user: { id: string; name: string; email: string; role: SessionPayload["role"]; passwordHash: string }) {
+  const token = await signSession({ sub: user.id, name: user.name, email: user.email, role: user.role, pv: passwordVersion(user.passwordHash) });
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -46,9 +52,10 @@ export async function getSession(): Promise<SessionPayload | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const payload = await verifySession(token);
   if (!payload) return null;
-  const user = await db.user.findUnique({ where: { id: payload.sub }, select: { active: true, role: true, name: true } });
+  const user = await db.user.findUnique({ where: { id: payload.sub }, select: { active: true, role: true, name: true, passwordHash: true } });
   if (!user?.active) return null;
-  return { ...payload, role: user.role, name: user.name };
+  if (payload.pv !== passwordVersion(user.passwordHash)) return null;
+  return { ...payload, role: user.role, name: user.name, pv: payload.pv };
 }
 
 /**

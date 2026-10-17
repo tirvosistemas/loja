@@ -625,7 +625,7 @@ async function seedOrders(settings: Settings, refs: Map<string, ProductRef>, mar
     const changeForCents = o.method === "CASH_ON_DELIVERY" ? Math.ceil((totals.totalCents + 1) / 5000) * 5000 : null;
 
     let code = "";
-    do code = `TV${randomCode(5)}`;
+    do code = `TV${randomCode(7)}`;
     while (usedCodes.has(code) || (await db.order.findUnique({ where: { code }, select: { id: true } })));
     usedCodes.add(code);
 

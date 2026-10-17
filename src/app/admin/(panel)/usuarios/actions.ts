@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { hashPassword, requireAdmin, verifyPassword } from "@/lib/auth";
+import { createSession, hashPassword, requireAdmin, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, fromZod, isUniqueError, type ActionResult } from "@/lib/action";
 import { rateLimit } from "@/lib/rate-limit";
@@ -143,8 +143,10 @@ export async function changeOwnPasswordAction(input: z.input<typeof ownPasswordS
   if (!user) return fail("Conta não encontrada.");
   if (!(await verifyPassword(parsed.data.current, user.passwordHash))) return fail("Senha atual incorreta.", { current: "Senha atual incorreta." });
   try {
-    await db.user.update({ where: { id: session.sub }, data: { passwordHash: await hashPassword(parsed.data.next) } });
-    return { ok: true, message: "Senha alterada." };
+    const updated = await db.user.update({ where: { id: session.sub }, data: { passwordHash: await hashPassword(parsed.data.next) } });
+    // A troca invalida as outras sessões; esta continua aberta com a nova versão.
+    await createSession(updated);
+    return { ok: true, message: "Senha alterada. Outras sessões abertas foram encerradas." };
   } catch (e) {
     console.error("[usuários] falha ao trocar a própria senha:", e);
     return fail("Não foi possível alterar a senha.");

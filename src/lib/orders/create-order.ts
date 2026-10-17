@@ -134,7 +134,7 @@ export async function createOrder(raw: unknown, ctx: CreateOrderContext): Promis
         async (tx) => {
           let code = "";
           for (let i = 0; i < 8 && !code; i++) {
-            const candidate = `TV${randomCode(5)}`;
+            const candidate = `TV${randomCode(7)}`;
             const taken = await tx.order.findUnique({ where: { code: candidate }, select: { id: true } });
             if (!taken) code = candidate;
           }
