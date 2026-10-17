@@ -1,0 +1,45 @@
+# Caddy: HTTPS automático (Let's Encrypt) para o domínio em DOMAIN (arquivo .env).
+# Com DOMAIN=localhost o Caddy usa um certificado local, bom para testes.
+
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# Imagens enviadas pelo painel: servidas direto do disco, com cache longo
+	# (cada arquivo tem nome único e nunca muda depois de salvo).
+	handle /uploads/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		header X-Content-Type-Options "nosniff"
+		file_server {
+			hide .*
+		}
+	}
+
+	# Todo o resto vai para o Next.js.
+	handle {
+		reverse_proxy app:3000 {
+			# IP real do cliente para o limite de requisições do app.
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		?X-Content-Type-Options "nosniff"
+		?Referrer-Policy "strict-origin-when-cross-origin"
+		?X-Frame-Options "SAMEORIGIN"
+		-Server
+		-X-Powered-By
+	}
+
+	log {
+		output stdout
+		format console
+		level WARN
+	}
+}
+
+# Para também atender www.seudominio (aponte o DNS do www para a VM antes):
+# www.{$DOMAIN} {
+# 	redir https://{$DOMAIN}{uri} permanent
+# }

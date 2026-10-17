@@ -1,0 +1,74 @@
+# Verificação a cada push e pull request: tipos, testes unitários, build do Next
+# e build da imagem Docker (sem publicar).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Valores fictícios: o build não acessa o banco (todas as páginas são dinâmicas).
+      DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
+      AUTH_SECRET: ci-0123456789abcdef0123456789abcdef0123456789
+      APP_URL: http://localhost:3000
+      UPLOAD_DIR: ./data/uploads
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar o Prisma Client
+        run: npx prisma generate
+
+      - name: Checar tipos
+        run: npx tsc --noEmit
+
+      - name: Testes unitários
+        run: npx vitest run
+
+      - name: Build do Next
+        run: npx next build
+
+  imagem:
+    name: Imagem Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build da imagem (sem publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          push: false
+          tags: tirvo-app:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,60 @@
+# Deploy automático na VM da Oracle Cloud a cada push na main (ou manualmente em
+# Actions → Deploy → Run workflow). Entra por SSH e roda deploy/update.sh.
+#
+# Segredos do repositório (Settings → Secrets and variables → Actions):
+#   ORACLE_HOST      IP público ou domínio da VM
+#   ORACLE_USER      usuário SSH (ex.: ubuntu)
+#   ORACLE_SSH_KEY   chave privada SSH (conteúdo completo do arquivo)
+#   ORACLE_PORT      opcional, padrão 22
+#   ORACLE_APP_DIR   opcional, padrão ~/tirvo-loja
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Atualizar a loja na VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Conferir segredos
+        id: check
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER }}
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          if [ -z "$ORACLE_HOST" ] || [ -z "$ORACLE_USER" ] || [ -z "$ORACLE_SSH_KEY" ]; then
+            echo "::notice::Deploy ignorado: configure ORACLE_HOST, ORACLE_USER e ORACLE_SSH_KEY nos segredos do repositório."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Atualizar por SSH
+        if: steps.check.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_DIR: ${{ secrets.ORACLE_APP_DIR }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_PORT || 22 }}
+          envs: APP_DIR,DEPLOY_BRANCH
+          command_timeout: 35m
+          script: |
+            set -e
+            cd "${APP_DIR:-$HOME/tirvo-loja}"
+            BRANCH="${DEPLOY_BRANCH:-main}" ./deploy/update.sh

@@ -1,0 +1,21 @@
+# Complemento para testar a imagem no computador, sem o Caddy:
+#
+#   docker compose -f docker-compose.yml -f docker/compose.local.yml up -d --build mysql app
+#   abra http://localhost:3100 (APP_PORT muda a porta)
+#
+# Em redes com proxy que intercepta HTTPS, aponte EXTRA_CA_CERT para o certificado
+# da rede para o npm e o Prisma conseguirem baixar pacotes durante o build.
+
+services:
+  app:
+    build:
+      secrets: [extra_ca]
+    ports:
+      - "127.0.0.1:${APP_PORT:-3100}:3000"
+  tools:
+    build:
+      secrets: [extra_ca]
+
+secrets:
+  extra_ca:
+    file: ${EXTRA_CA_CERT:-/dev/null}

@@ -1,0 +1,98 @@
+# Tirvo em produção: MySQL + app (Next.js) + Caddy (HTTPS).
+#
+#   docker compose up -d --build                                  sobe tudo
+#   docker compose run --rm tools npm run db:seed -- --minimal    primeira carga (admin, páginas, categorias)
+#   docker compose logs -f app                                    acompanha o app
+#
+# As variáveis vêm do arquivo .env (copie de .env.example). Só o Caddy publica portas;
+# o MySQL e o app ficam acessíveis apenas dentro da rede do Compose.
+
+name: tirvo
+
+x-app-env: &app-env
+  NODE_ENV: production
+  # Montada a partir das variáveis MYSQL_* (use só letras e números na senha).
+  DATABASE_URL: mysql://${MYSQL_USER:-tirvo}:${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}@mysql:3306/${MYSQL_DATABASE:-tirvo}
+  UPLOAD_DIR: /app/data/uploads
+  TZ: America/Sao_Paulo
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tirvo}
+      MYSQL_USER: ${MYSQL_USER:-tirvo}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/tirvo.cnf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: tirvo-app:latest
+    restart: unless-stopped
+    env_file:
+      - path: ${ENV_FILE:-.env}
+        required: true
+    environment:
+      <<: *app-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ${UPLOADS_PATH:-./data/uploads}:/app/data/uploads
+    expose:
+      - "3000"
+    stop_grace_period: 20s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${UPLOADS_PATH:-./data/uploads}:/srv/uploads:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Migrações e seed: docker compose run --rm tools <comando>
+  tools:
+    profiles: ["tools"]
+    build:
+      context: .
+      target: tools
+    image: tirvo-tools:latest
+    env_file:
+      - path: ${ENV_FILE:-.env}
+        required: true
+    environment:
+      <<: *app-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ${UPLOADS_PATH:-./data/uploads}:/app/data/uploads
+
+volumes:
+  mysql_data:
+  caddy_data:
+  caddy_config:

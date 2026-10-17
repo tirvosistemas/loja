@@ -1,0 +1,33 @@
+# Fica fora do contexto do docker build (imagem menor e sem segredos).
+.git
+.github
+node_modules
+.next
+out
+data
+deploy
+docs
+backups
+coverage
+playwright-report
+test-results
+tests/e2e
+*.tsbuildinfo
+*.md
+next-env.d.ts
+npm-debug.log*
+.DS_Store
+.vscode
+.idea
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+docker/.env*
+
+# Arquivos do Docker que não entram na imagem
+docker-compose*.yml
+docker/compose.*.yml
+docker/Caddyfile
+docker/mysql
