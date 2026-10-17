@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatBRL } from "@/lib/format";
 import { buildOrderMessage, whatsappLink, type OrderForMessage } from "@/lib/whatsapp";
 
-// Mensagem organizada que chega no WhatsApp da loja e o link wa.me.
+// Mensagem organizada que chega no WhatsApp da loja e o link que abre a conversa.
 
 const order = (patch: Partial<OrderForMessage> = {}): OrderForMessage => ({
   code: "TVABC12",
@@ -68,8 +68,9 @@ describe("buildOrderMessage", () => {
   });
 
   it("informa o troco no dinheiro", () => {
-    expect(msg).toContain(`Troco para ${formatBRL(650000)}`);
+    expect(msg).toContain(`Troco para ${formatBRL(650000)} (levar ${formatBRL(650000 - 631490)} de troco)`);
     expect(buildOrderMessage(order({ changeForCents: null }))).toContain("Não precisa de troco");
+    expect(buildOrderMessage(order({ changeForCents: 631490 }))).toContain("Não precisa de troco");
   });
 
   it("traz observações e o link para acompanhar", () => {
@@ -79,6 +80,12 @@ describe("buildOrderMessage", () => {
 
   it("frete grátis aparece como Grátis", () => {
     expect(buildOrderMessage(order({ shippingCents: 0 }))).toContain("Frete (4,2 km): Grátis");
+  });
+
+  it("cupom de frete grátis aparece no resumo", () => {
+    const m = buildOrderMessage(order({ couponCode: "FRETEGRATIS", discountCents: 0, shippingCents: 0, totalCents: 639990 }));
+    expect(m).toContain("Cupom FRETEGRATIS: frete grátis");
+    expect(m).not.toContain("Cupom FRETEGRATIS: -");
   });
 
   it("retirada na loja não tem frete nem endereço do cliente", () => {
@@ -109,7 +116,16 @@ describe("whatsappLink", () => {
 
   it("codifica o texto da mensagem", () => {
     const url = whatsappLink("41999998888", "Olá! Pedido #TV1 & cia\nLinha 2");
-    expect(url).toBe("https://wa.me/5541999998888?text=Ol%C3%A1!%20Pedido%20%23TV1%20%26%20cia%0ALinha%202");
-    expect(decodeURIComponent(url.split("?text=")[1])).toBe("Olá! Pedido #TV1 & cia\nLinha 2");
+    expect(url).toBe("https://api.whatsapp.com/send?phone=5541999998888&text=Ol%C3%A1!%20Pedido%20%23TV1%20%26%20cia%0ALinha%202");
+    expect(new URL(url).searchParams.get("text")).toBe("Olá! Pedido #TV1 & cia\nLinha 2");
+  });
+
+  it("com texto não usa o wa.me, que troca os emojis por \"�\"", () => {
+    const text = buildOrderMessage(order({ paymentMethod: "ONLINE_STRIPE", paymentStatus: "PAID", customerEmail: "maria@exemplo.com" }));
+    const url = new URL(whatsappLink("5541999998888", text));
+    expect(url.host).toBe("api.whatsapp.com");
+    expect(url.searchParams.get("phone")).toBe("5541999998888");
+    expect(url.searchParams.get("text")).toBe(text);
+    for (const emoji of ["🛒", "👤", "✉️", "📦", "🛵", "💳", "✅", "🔗"]) expect(url.searchParams.get("text")).toContain(emoji);
   });
 });

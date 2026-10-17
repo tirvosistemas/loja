@@ -31,6 +31,9 @@ const postSchema = z.object({
 
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
+  if (!rateLimit(`reviews:${clientIp(req.headers)}`, 120, 60_000).ok) {
+    return NextResponse.json({ error: "Muitas consultas. Aguarde um pouco." }, { status: 429 });
+  }
   const parsed = getSchema.safeParse({ productId: sp.get("productId") ?? "", page: sp.get("page") ?? undefined });
   if (!parsed.success) return NextResponse.json({ error: "Parâmetros inválidos." }, { status: 400 });
   const data = await getReviewsPage(parsed.data.productId, parsed.data.page);

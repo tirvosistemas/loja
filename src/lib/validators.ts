@@ -14,6 +14,29 @@ export const cepSchema = z
   .transform(onlyDigits)
   .refine((d) => d.length === 8, "CEP deve ter 8 números.");
 
+/**
+ * Endereço de um serviço de push (FCM, Mozilla, Apple, Windows…): só https em domínio público.
+ * O servidor faz POST nesse endereço a cada campanha, então nada de IP, localhost ou nome da rede interna.
+ */
+export function isPushEndpoint(value: string) {
+  try {
+    const u = new URL(value);
+    const host = u.hostname.toLowerCase();
+    return (
+      u.protocol === "https:" &&
+      u.port === "" &&
+      !u.username &&
+      !u.password &&
+      host.includes(".") &&
+      !/^[\d.]+$/.test(host) && // IPv4 (o URL já normaliza 0x7f.1, 2130706433…)
+      !host.startsWith("[") && // IPv6
+      !/(^|\.)(localhost|local|internal|lan|home|localdomain)\.?$/.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export const cartItemSchema = z.object({
   productId: z.string().min(1).max(40),
   variantId: z.string().max(40).nullish(),

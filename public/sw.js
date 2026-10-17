@@ -1,5 +1,5 @@
 /* Tirvo — service worker: app instalável, funciona com internet fraca e recebe notificações. */
-const VERSION = "tirvo-v1";
+const VERSION = "tirvo-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const IMG_CACHE = `${VERSION}-img`;
@@ -58,7 +58,7 @@ self.addEventListener("fetch", (event) => {
             if (res.ok) c.put(req, res.clone()).then(() => trim(IMG_CACHE, 300));
             return res;
           })
-          .catch(() => hit);
+          .catch(() => hit || Response.error());
         return hit || net;
       }),
     );
@@ -66,12 +66,16 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Páginas: rede primeiro; sem internet, mostra a última versão ou a página offline.
+  // A página do pedido (nome e endereço do cliente) e o checkout nunca ficam guardados no aparelho.
   if (req.mode === "navigate") {
+    const privatePage = url.pathname.startsWith("/pedido/") || url.pathname.startsWith("/checkout");
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          if (res.ok) caches.open(PAGES_CACHE).then((c) => c.put(req, copy).then(() => trim(PAGES_CACHE, 40)));
+          if (res.ok && res.type === "basic" && !res.redirected && !privatePage) {
+            const copy = res.clone();
+            caches.open(PAGES_CACHE).then((c) => c.put(req, copy).then(() => trim(PAGES_CACHE, 40)));
+          }
           return res;
         })
         .catch(async () => (await caches.match(req)) || (await caches.match(OFFLINE_URL))),

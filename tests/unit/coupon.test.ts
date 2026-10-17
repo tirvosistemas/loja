@@ -122,6 +122,12 @@ describe("evaluateCoupon", () => {
     expect(r.discountCents).toBe(0);
   });
 
+  it("cupom de frete grátis respeita o escopo e a regra de promoções", () => {
+    expect(ok(run({ type: "FREE_SHIPPING", scope: "BRAND", brandIds: ["b1"] })).freeShipping).toBe(true);
+    expect(err(run({ type: "FREE_SHIPPING", scope: "BRAND", brandIds: ["b9"] }))).toMatch(/Nenhum produto/);
+    expect(err(run({ type: "FREE_SHIPPING", scope: "PRODUCTS", productIds: ["p2"], stackWithPromotions: false }))).toMatch(/Nenhum produto/);
+  });
+
   it("cupom de frete grátis também exige o mínimo", () => {
     expect(err(run({ type: "FREE_SHIPPING", minSubtotalCents: 50000 }))).toMatch(/500,00/);
   });

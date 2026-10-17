@@ -169,10 +169,11 @@ export function evaluateCoupon(
   const eligibleSubtotal = eligible.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
   const info = { id: coupon.id, code: coupon.code, type: coupon.type, description: coupon.description };
 
+  // O escopo (e a regra de promoções) vale também para o cupom de frete grátis.
+  if (eligible.length === 0 || eligibleSubtotal <= 0) return { ok: false, error: "Nenhum produto do carrinho vale para este cupom." };
   if (coupon.type === "FREE_SHIPPING") {
     return { ok: true, coupon: info, discountCents: 0, freeShipping: true, message: "Frete grátis aplicado." };
   }
-  if (eligibleSubtotal <= 0) return { ok: false, error: "Nenhum produto do carrinho vale para este cupom." };
 
   let discount = coupon.type === "PERCENT" ? Math.floor((eligibleSubtotal * coupon.value) / 100) : Math.min(coupon.value, eligibleSubtotal);
   if (coupon.maxDiscountCents != null) discount = Math.min(discount, coupon.maxDiscountCents);

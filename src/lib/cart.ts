@@ -116,10 +116,16 @@ export async function priceCart(items: CartInputItem[]): Promise<PricedCart> {
     const quantity = Math.min(it.quantity, maxQuantity);
     let issue: string | null = null;
     if (maxQuantity === 0) issue = "Sem estoque no momento.";
-    else if (quantity < it.quantity) issue = `Só temos ${maxQuantity} ${maxQuantity === 1 ? "unidade" : "unidades"} em estoque.`;
+    else if (quantity < it.quantity)
+      issue =
+        limitedByStock && stock < MAX_PER_LINE
+          ? `Só temos ${maxQuantity} ${maxQuantity === 1 ? "unidade" : "unidades"} em estoque.`
+          : `Limite de ${MAX_PER_LINE} unidades por item em cada pedido.`;
 
     const line: PricedLine = {
       ...base,
+      // Variação enviada para um produto que não tem (mais) variações: vale o produto.
+      variantId: variant?.id ?? null,
       slug: p.slug,
       name: p.name,
       variantName: variant?.name ?? null,

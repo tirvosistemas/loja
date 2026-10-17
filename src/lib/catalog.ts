@@ -399,13 +399,26 @@ export const getMenuCategories = cache(async (): Promise<MenuCategory[]> => {
 });
 
 export async function getHomeCategories() {
+  const activeProducts = { _count: { select: { products: { where: { status: "ACTIVE" as const } } } } };
   const rows = await db.category.findMany({
     where: { active: true, OR: [{ featured: true }, { parentId: null }] },
     orderBy: [{ featured: "desc" }, { sortOrder: "asc" }],
-    select: { id: true, name: true, slug: true, icon: true, image: true, featured: true, _count: { select: { products: { where: { status: "ACTIVE" } } } } },
+    select: {
+      id: true, name: true, slug: true, icon: true, image: true, featured: true,
+      ...activeProducts,
+      // A página da categoria lista também as subcategorias ativas: a contagem segue a mesma regra.
+      children: { where: { active: true }, select: activeProducts },
+    },
     take: 12,
   });
-  return rows.map((c) => ({ id: c.id, name: c.name, slug: c.slug, icon: c.icon, image: c.image, productCount: c._count.products }));
+  return rows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    icon: c.icon,
+    image: c.image,
+    productCount: c._count.products + c.children.reduce((n, ch) => n + ch._count.products, 0),
+  }));
 }
 
 export const getBrands = cache(async () => {

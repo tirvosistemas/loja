@@ -56,7 +56,11 @@ export async function quoteCart(input: CartQuoteInput, settings: Settings): Prom
   const deliveryType = input.deliveryType ?? "DELIVERY";
 
   const code = input.couponCode?.trim().toUpperCase() || null;
-  const coupon = code && cart.lines.length > 0 ? await evaluateCouponCode(code, couponLines(cart.lines), input.phone) : null;
+  let coupon = code && cart.lines.length > 0 ? await evaluateCouponCode(code, couponLines(cart.lines), input.phone) : null;
+  // Na retirada o cupom de frete grátis não teria efeito e gastaria um uso.
+  if (coupon?.ok && coupon.freeShipping && deliveryType === "PICKUP") {
+    coupon = { ok: false, error: "Este cupom de frete grátis vale só para entrega por motoboy." };
+  }
   const couponOk = coupon?.ok ? coupon : null;
 
   let shipping: ShippingQuote | null = null;

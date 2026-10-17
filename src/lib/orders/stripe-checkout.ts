@@ -38,6 +38,15 @@ function publicImage(src: string | null) {
 }
 
 export async function createStripeCheckout(order: OrderForStripe): Promise<{ id: string; url: string }> {
+  // A cobrança precisa bater com o total gravado no pedido (itens + frete − cupom).
+  const charged =
+    order.items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0) +
+    (order.deliveryType === "DELIVERY" ? order.shippingCents : 0) -
+    order.discountCents;
+  if (charged !== order.totalCents) {
+    throw new Error(`Total do pedido #${order.code} não confere (${charged} ≠ ${order.totalCents}).`);
+  }
+
   const stripe = await getStripe();
   if (!stripe) throw new StripeUnavailableError();
 

@@ -14,11 +14,15 @@ export function rateLimit(key: string, limit: number, windowMs: number) {
   return { ok: b.count <= limit, remaining: Math.max(0, limit - b.count), retryAfterMs: b.reset - now };
 }
 
+/**
+ * IP do cliente. X-Real-IP vem primeiro porque o Caddy sempre o sobrescreve com o IP real;
+ * um cabeçalho que o próprio visitante inventa (ex.: CF-Connecting-IP) não pode furar o limite.
+ */
 export function clientIp(headers: Headers): string {
-  return (
-    headers.get("cf-connecting-ip") ||
-    headers.get("x-real-ip") ||
+  const ip =
+    headers.get("x-real-ip")?.trim() ||
     headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "local"
-  );
+    headers.get("cf-connecting-ip")?.trim() ||
+    "local";
+  return ip.slice(0, 64);
 }

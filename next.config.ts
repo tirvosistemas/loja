@@ -5,6 +5,9 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+  // Política mínima: não restringe scripts (Stripe, Analytics, Pixel), só bloqueia o site
+  // dentro de iframes de terceiros, troca de <base> e plugins.
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
 ];
 
 const nextConfig: NextConfig = {

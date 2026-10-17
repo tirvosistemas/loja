@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { isPushEndpoint } from "@/lib/validators";
 
 const subSchema = z.object({
-  endpoint: z.string().url().max(768),
+  endpoint: z.string().max(768).refine(isPushEndpoint),
   keys: z.object({ p256dh: z.string().min(10).max(255), auth: z.string().min(4).max(255) }),
 });
 
@@ -23,7 +24,10 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const body = (await req.json().catch(() => null)) as { endpoint?: string } | null;
-  if (body?.endpoint) await db.pushSubscription.deleteMany({ where: { endpoint: body.endpoint.slice(0, 768) } });
+  if (!rateLimit(`push-del:${clientIp(req.headers)}`, 20, 60_000).ok) return NextResponse.json({ error: "Muitas tentativas." }, { status: 429 });
+  const body = (await req.json().catch(() => null)) as { endpoint?: unknown } | null;
+  if (typeof body?.endpoint === "string" && body.endpoint) {
+    await db.pushSubscription.deleteMany({ where: { endpoint: body.endpoint.slice(0, 768) } });
+  }
   return NextResponse.json({ ok: true });
 }

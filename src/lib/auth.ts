@@ -14,6 +14,17 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
+// Hash de uma senha aleatória descartada: usado quando o e-mail não existe, para o login
+// levar o mesmo tempo e não revelar quais e-mails têm acesso ao painel.
+const DUMMY_HASH = "$2b$12$lhAmg2zDJ5yklJ8pUHsdK.aKI5L1yfd3ksKRtCqqXQftegZploHoW";
+
+/** Confere e-mail e senha sempre com o mesmo custo. Devolve o usuário ativo ou null. */
+export async function verifyCredentials(email: string, password: string) {
+  const user = await db.user.findUnique({ where: { email } });
+  const ok = await bcrypt.compare(password, user?.passwordHash || DUMMY_HASH);
+  return user && user.active && ok ? user : null;
+}
+
 export async function createSession(user: { id: string; name: string; email: string; role: SessionPayload["role"] }) {
   const token = await signSession({ sub: user.id, name: user.name, email: user.email, role: user.role });
   const jar = await cookies();

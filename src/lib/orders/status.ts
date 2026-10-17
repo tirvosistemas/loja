@@ -44,15 +44,16 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus, op
         if (FINAL.includes(order.status)) return fail("Pedido entregue não pode mudar de status.");
 
         if (next === "CANCELED") {
-          // Trava contra cancelamento duplo (dois cliques, webhook + painel ao mesmo tempo).
+          // Trava contra cancelamento duplo (dois cliques, webhook + painel ao mesmo tempo) e
+          // contra cancelar um pedido que acabou de ser entregue.
           const res = await tx.order.updateMany({
-            where: { id: order.id, status: { not: "CANCELED" } },
+            where: { id: order.id, status: { notIn: FINAL } },
             data: {
               status: "CANCELED",
               ...(order.paymentStatus === "PENDING" ? { paymentStatus: "EXPIRED" as const } : {}),
             },
           });
-          if (res.count === 0) return { ok: true, message: "O pedido já estava cancelado." } as const;
+          if (res.count === 0) return { ok: true, message: "O pedido já estava cancelado ou finalizado." } as const;
           await restoreStock(tx, order.items);
           if (order.couponId) {
             await tx.coupon.updateMany({

@@ -90,7 +90,11 @@ const storeInput = z
     youtube: urlField,
     announcementEnabled: z.boolean(),
     announcementText: text(160),
-    announcementHref: text(300).refine((v) => v === "" || v.startsWith("/") || isHttpUrl(v), "Use um caminho do site (ex.: /ofertas) ou um link completo."),
+    // "//site.com" e "/\site.com" levariam para outro domínio: caminho interno é só "/algo".
+    announcementHref: text(300).refine(
+      (v) => v === "" || (/^\/(?![/\\])/.test(v) && !/[\s\\]/.test(v)) || isHttpUrl(v),
+      "Use um caminho do site (ex.: /ofertas) ou um link completo.",
+    ),
   })
   .refine((v) => !v.announcementEnabled || v.announcementText.length > 0, { path: ["announcementText"], message: "Escreva o texto da barra de aviso." });
 

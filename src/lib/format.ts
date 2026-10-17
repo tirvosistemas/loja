@@ -13,6 +13,9 @@ export function parseBRL(input: string | number | null | undefined): number | nu
   if (typeof input === "number") return Math.round(input * 100);
   let s = input.replace(/[^\d,.-]/g, "");
   if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  // "1.299" e "1.299.900" são milhares (pt-BR), não decimais.
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  if (!/\d/.test(s)) return null;
   const n = Number(s);
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }

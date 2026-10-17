@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { formatBRL } from "@/lib/format";
-import { getStripe, getStripeWebhookSecret } from "@/lib/stripe";
+import { getStripeWebhookSecret } from "@/lib/stripe";
 import {
   cancelExpiredStripeOrders,
   markOrderPaid,
@@ -86,8 +86,10 @@ async function handleRefund(charge: Stripe.Charge) {
 }
 
 export async function POST(req: Request) {
-  const [stripe, secret] = await Promise.all([getStripe(), getStripeWebhookSecret()]);
-  if (!stripe || !secret) return NextResponse.json({ error: "Stripe não configurada." }, { status: 503 });
+  // Só o segredo do webhook é necessário: avisos de pedidos antigos (boleto compensado,
+  // reembolso) continuam valendo mesmo se o pagamento online for desligado depois.
+  const secret = await getStripeWebhookSecret();
+  if (!secret) return NextResponse.json({ error: "Stripe não configurada." }, { status: 503 });
 
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
@@ -95,7 +97,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, secret);
+    event = Stripe.webhooks.constructEvent(body, signature, secret);
   } catch (e) {
     console.warn("[stripe] assinatura inválida:", (e as Error).message);
     return NextResponse.json({ error: "Assinatura inválida." }, { status: 400 });

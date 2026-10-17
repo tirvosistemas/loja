@@ -22,13 +22,32 @@ async function stockControlled(tx: Tx, productIds: string[]) {
   return new Set(rows.filter((p) => p.trackStock && !p.allowBackorder).map((p) => p.id));
 }
 
+function sortedByRow<T extends { productId: string; variantId: string | null }>(lines: T[]): T[] {
+  const key = (l: T) => `${l.productId}:${l.variantId ?? ""}`;
+  return [...lines].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+}
+
+/**
+ * Com variações, o estoque do produto é a soma das variações (o painel grava assim): acompanha
+ * a baixa e a devolução da variação, com atualização atômica e sem ficar negativo.
+ */
+async function adjustVariantTotal(tx: Tx, productId: string, delta: number) {
+  if (delta >= 0) {
+    await tx.product.updateMany({ where: { id: productId }, data: { stock: { increment: delta } } });
+    return;
+  }
+  const res = await tx.product.updateMany({ where: { id: productId, stock: { gte: -delta } }, data: { stock: { decrement: -delta } } });
+  if (res.count === 0) await tx.product.updateMany({ where: { id: productId }, data: { stock: 0 } });
+}
+
 /** Baixa o estoque de forma atômica (só se ainda houver a quantidade). Lança OutOfStockError. */
 export async function reserveStock(tx: Tx, lines: StockLine[]) {
   const controlled = await stockControlled(
     tx,
     lines.map((l) => l.productId),
   );
-  for (const l of lines) {
+  // Sempre na mesma ordem: pedidos simultâneos com os mesmos itens não se travam (deadlock).
+  for (const l of sortedByRow(lines)) {
     if (controlled.has(l.productId)) {
       const res = l.variantId
         ? await tx.productVariant.updateMany({
@@ -40,6 +59,7 @@ export async function reserveStock(tx: Tx, lines: StockLine[]) {
             data: { stock: { decrement: l.quantity } },
           });
       if (res.count === 0) throw new OutOfStockError(l.name);
+      if (l.variantId) await adjustVariantTotal(tx, l.productId, -l.quantity);
     }
     await tx.product.update({ where: { id: l.productId }, data: { soldCount: { increment: l.quantity } } });
   }
@@ -53,10 +73,11 @@ export async function restoreStock(tx: Tx, items: { productId: string | null; va
     tx,
     withProduct.map((i) => i.productId),
   );
-  for (const i of withProduct) {
+  for (const i of sortedByRow(withProduct)) {
     if (controlled.has(i.productId)) {
       if (i.variantId) {
-        await tx.productVariant.updateMany({ where: { id: i.variantId }, data: { stock: { increment: i.quantity } } });
+        const res = await tx.productVariant.updateMany({ where: { id: i.variantId }, data: { stock: { increment: i.quantity } } });
+        if (res.count > 0) await adjustVariantTotal(tx, i.productId, i.quantity);
       } else {
         await tx.product.updateMany({ where: { id: i.productId }, data: { stock: { increment: i.quantity } } });
       }

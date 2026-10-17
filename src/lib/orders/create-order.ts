@@ -255,6 +255,11 @@ export async function createOrder(raw: unknown, ctx: CreateOrderContext): Promis
       }
       if (e instanceof CouponUsageError) return invalid({ couponCode: e.message }, e.message);
       if (isUniqueError(e, "code")) continue; // código repetido em pedidos simultâneos: tenta de novo
+      if ((e as { code?: string })?.code === "P2034" && attempt < 2) {
+        // Conflito de escrita/deadlock com outro pedido ao mesmo tempo: espera um pouco e repete.
+        await new Promise((r) => setTimeout(r, 50 + Math.random() * 150));
+        continue;
+      }
       console.error("[pedidos] falha ao criar pedido:", e);
       return { ok: false, status: 500, error: "Não foi possível registrar o pedido. Tente de novo em instantes." };
     }

@@ -56,6 +56,7 @@ export function buildOrderMessage(o: OrderForMessage): string {
   L.push("💰 *Resumo*");
   L.push(`Subtotal: ${formatBRL(o.subtotalCents)}`);
   if (o.discountCents > 0) L.push(`Cupom${o.couponCode ? ` ${o.couponCode}` : ""}: -${formatBRL(o.discountCents)}`);
+  else if (o.couponCode) L.push(`Cupom ${o.couponCode}${o.deliveryType === "DELIVERY" && o.shippingCents === 0 ? ": frete grátis" : ""}`);
   if (o.pixDiscountCents > 0) L.push(`Desconto Pix: -${formatBRL(o.pixDiscountCents)}`);
   if (o.deliveryType === "DELIVERY") {
     const km = o.distanceKm ? ` (${formatKm(o.distanceKm)})` : "";
@@ -77,7 +78,11 @@ export function buildOrderMessage(o: OrderForMessage): string {
   const paid = o.paymentStatus === "PAID" ? " ✅ PAGO" : "";
   L.push(`💳 *Pagamento:* ${PAYMENT_METHOD_SHORT[o.paymentMethod]}${paid}`);
   if (o.paymentMethod === "CASH_ON_DELIVERY") {
-    L.push(o.changeForCents && o.changeForCents > o.totalCents ? `Troco para ${formatBRL(o.changeForCents)}` : "Não precisa de troco");
+    L.push(
+      o.changeForCents && o.changeForCents > o.totalCents
+        ? `Troco para ${formatBRL(o.changeForCents)} (levar ${formatBRL(o.changeForCents - o.totalCents)} de troco)`
+        : "Não precisa de troco",
+    );
   }
   if (o.paymentMethod === "PIX_MANUAL" && o.paymentStatus !== "PAID") L.push("Vou enviar o comprovante do Pix aqui.");
   if (o.notes) {
@@ -91,9 +96,13 @@ export function buildOrderMessage(o: OrderForMessage): string {
   return L.join("\n");
 }
 
-/** Link que abre o WhatsApp com a mensagem pronta. Número só com dígitos, com DDI (55). */
+/**
+ * Link que abre o WhatsApp com a mensagem pronta. Número só com dígitos, com DDI (55).
+ * Com texto usa api.whatsapp.com/send: o atalho wa.me troca os emojis por "�" ao redirecionar.
+ */
 export function whatsappLink(phone: string, text?: string) {
   let digits = onlyDigits(phone);
   if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
-  return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+  if (!text) return `https://wa.me/${digits}`;
+  return `https://api.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(text)}`;
 }

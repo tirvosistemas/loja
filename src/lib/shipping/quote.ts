@@ -196,8 +196,9 @@ export async function quoteShipping(input: ShippingQuoteInput, settings?: Settin
     street: (input.street || info?.street || "").trim(),
     number: (input.number || "").trim(),
     neighborhood: (input.neighborhood || info?.neighborhood || "").trim(),
-    city: (input.city || info?.city || "").trim(),
-    state: (input.state || info?.state || "PR").trim().toUpperCase(),
+    // Cidade e UF do CEP valem mais que as digitadas: são elas que localizam o endereço (e o frete).
+    city: (info?.city || input.city || "").trim(),
+    state: (info?.state || input.state || "PR").trim().toUpperCase(),
   };
 
   if (!cityIsAllowed(cfg, address.city)) {
