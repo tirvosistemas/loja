@@ -1,7 +1,8 @@
 import { priceCart, type CartInputItem, type PricedCart, type PricedLine } from "../cart";
 import { computeTotals, evaluateCouponCode, type CouponLine, type CouponResult, type Totals } from "../pricing";
 import { enabledPaymentMethods, type Settings } from "../settings";
-import { quoteShipping, type ShippingQuote } from "../shipping/quote";
+import { cityIsAllowed, quoteShipping, type ShippingQuote } from "../shipping/quote";
+import { lookupCep } from "../cep";
 import { PIX_METHODS, type PaymentMethodKey } from "../constants";
 
 // Cotação completa do carrinho (itens, cupom, frete e totais). É a mesma conta usada no
@@ -60,9 +61,15 @@ export async function quoteCart(input: CartQuoteInput, settings: Settings): Prom
 
   let shipping: ShippingQuote | null = null;
   if (deliveryType === "DELIVERY" && cart.lines.length > 0 && hasShippingAddress(input.address)) {
+    const a = input.address;
     shipping = await quoteShipping(
       {
-        ...input.address,
+        cep: a.cep,
+        number: a.number,
+        street: a.street,
+        neighborhood: a.neighborhood,
+        city: a.city,
+        state: a.state,
         subtotalCents: cart.subtotalCents,
         itemCount: cart.itemCount,
         allItemsFreeShipping: cart.allFreeShipping,
@@ -70,6 +77,22 @@ export async function quoteCart(input: CartQuoteInput, settings: Settings): Prom
       },
       settings,
     );
+    // A cidade digitada não pode driblar a área de entrega: confere a cidade do CEP.
+    if (shipping.ok && shipping.available && settings.shipping.restrictToAllowedCities) {
+      const info = await lookupCep(a.cep);
+      if (info?.city && !cityIsAllowed(settings.shipping, info.city)) {
+        shipping = {
+          ...shipping,
+          ok: false,
+          available: false,
+          feeCents: 0,
+          free: false,
+          freeReason: undefined,
+          missingForFreeCents: undefined,
+          reason: `Ainda não entregamos em ${info.city}. Atendemos Curitiba e região metropolitana.`,
+        };
+      }
+    }
   }
 
   const method = input.paymentMethod && methods.includes(input.paymentMethod) ? input.paymentMethod : null;

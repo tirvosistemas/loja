@@ -72,7 +72,7 @@ export async function createOrder(raw: unknown, ctx: CreateOrderContext): Promis
   if (data.deliveryType === "PICKUP" && !settings.address.pickupEnabled) {
     return invalid({ deliveryType: "A retirada na loja está desativada no momento." }, "Escolha a entrega por motoboy.");
   }
-  if (data.paymentMethod !== "ONLINE_STRIPE" && !onlyDigits(settings.store.whatsapp)) {
+  if (data.paymentMethod !== "ONLINE_STRIPE" && onlyDigits(settings.store.whatsapp).length < 10) {
     return { ok: false, status: 503, error: "A loja ainda não configurou o WhatsApp de pedidos." };
   }
 

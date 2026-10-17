@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { Heart, ShoppingBag, Truck, Zap } from "lucide-react";
 import { toast } from "sonner";
 import type { ProductCardDTO } from "@/lib/catalog";
@@ -12,11 +13,15 @@ import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+const noopSubscribe = () => () => {};
+
 /** Card de produto usado em todas as listas da loja. */
 export function ProductCard({ product, priority, className }: { product: ProductCardDTO; priority?: boolean; className?: string }) {
   const add = useCart((s) => s.add);
   const openDrawer = useCart((s) => s.openDrawer);
-  const wished = useLists((s) => s.wishlist.includes(product.id));
+  // Favoritos vêm do navegador: só lê depois de montar, para não divergir do HTML do servidor.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const wished = useLists((s) => s.wishlist.includes(product.id)) && mounted;
   const toggleWish = useLists((s) => s.toggleWish);
   const href = `/produto/${product.slug}`;
 

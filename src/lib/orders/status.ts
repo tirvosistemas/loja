@@ -179,12 +179,15 @@ export async function cancelExpiredStripeOrders(): Promise<number> {
   if (now - lastSweep < 60_000) return 0;
   lastSweep = now;
   try {
+    const cutoff = new Date(now - STRIPE_ABANDON_MS);
     const stale = await db.order.findMany({
       where: {
         status: "NEW",
         paymentMethod: "ONLINE_STRIPE",
         paymentStatus: "PENDING",
-        createdAt: { lt: new Date(now - STRIPE_ABANDON_MS) },
+        createdAt: { lt: cutoff },
+        // Nova tentativa de pagamento atualiza o pedido: espera a sessão nova expirar.
+        updatedAt: { lt: cutoff },
         // Boleto gerado: espera a compensação (a Stripe avisa pelo webhook).
         events: { none: { type: "payment", status: PAYMENT_PROCESSING } },
       },
