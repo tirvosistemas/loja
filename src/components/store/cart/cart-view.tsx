@@ -18,7 +18,7 @@ import { CouponField } from "./coupon-field";
 import { ShippingCalculator, type ShipTo } from "./shipping-calculator";
 import { FreeShippingProgress, SummaryRows, type FreeShippingCfg } from "./summary";
 import { useCartQuote } from "./use-cart-quote";
-import { HideWhatsAppFloatOnMobile, rememberShipping } from "./shared";
+import { rememberShipping } from "./shared";
 
 export function CartView({ freeShipping, pickup }: { freeShipping: FreeShippingCfg; pickup: { enabled: boolean; place: string | null } }) {
   const mounted = useMounted();
@@ -123,7 +123,6 @@ export function CartView({ freeShipping, pickup }: { freeShipping: FreeShippingC
 
       {/* Barra fixa no celular: total e botão de finalizar */}
       <div aria-hidden className="h-24 lg:hidden" />
-      <HideWhatsAppFloatOnMobile />
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 border-t border-border bg-background/95 shadow-[0_-12px_32px_-16px_rgb(0_0_0/0.5)] backdrop-blur-md md:bottom-0 md:pb-[env(safe-area-inset-bottom)] lg:hidden">
         <div className="container-page flex h-[4.5rem] items-center justify-between gap-3">
           <div className="min-w-0">

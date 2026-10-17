@@ -11,8 +11,8 @@ const GREETING = "Olá! Vim pelo site da Tirvo e queria tirar uma dúvida.";
 export function WhatsAppFloat({ phone }: { phone: string }) {
   const pathname = usePathname();
   if (!phone || pathname.startsWith("/checkout")) return null;
-  // Na página do produto, no celular, a barra de compra ocupa esse canto.
-  const onProduct = pathname.startsWith("/produto/");
+  // No produto e no carrinho, no celular/tablet, a barra fixa de compra ocupa esse canto.
+  const hideBelowLg = pathname.startsWith("/produto/") || pathname === "/carrinho";
   return (
     <a
       href={whatsappLink(phone, GREETING)}
@@ -21,7 +21,7 @@ export function WhatsAppFloat({ phone }: { phone: string }) {
       aria-label="Falar com a Tirvo no WhatsApp"
       className={cn(
         "group fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-2 md:bottom-6 md:right-6",
-        onProduct && "max-lg:hidden",
+        hideBelowLg && "max-lg:hidden",
       )}
     >
       <span className="pointer-events-none hidden translate-x-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-foreground opacity-0 shadow-card transition-all group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 md:block">

@@ -39,13 +39,3 @@ export function rememberShipping(s: QuoteShipping, number: string) {
     });
   }
 }
-
-/**
- * No celular a barra fixa do carrinho ocupa o canto onde fica o botão flutuante do
- * WhatsApp; aqui ele some até a largura em que a barra deixa de existir.
- */
-export function HideWhatsAppFloatOnMobile() {
-  return (
-    <style>{`@media (max-width: 1023.98px){a[aria-label="Falar com a Tirvo no WhatsApp"]{display:none!important}}`}</style>
-  );
-}
