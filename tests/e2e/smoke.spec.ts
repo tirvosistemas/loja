@@ -30,9 +30,10 @@ async function openBuyableProduct(page: Page) {
   const hrefs = await productLinks(page);
   expect(hrefs.length, "a página inicial deveria listar produtos (rode o seed de demonstração)").toBeGreaterThan(0);
   for (const href of hrefs.slice(0, 8)) {
-    await page.goto(href);
-    const add = page.getByRole("button", { name: "Adicionar ao carrinho", exact: true });
-    if (await add.isVisible().catch(() => false)) return add;
+    // Espera a página hidratar: um clique antes disso não chega ao React.
+    await page.goto(href, { waitUntil: "networkidle" });
+    const add = page.getByRole("button", { name: "Adicionar ao carrinho", exact: true }).first();
+    if (await add.waitFor({ state: "visible", timeout: 5_000 }).then(() => true, () => false)) return add;
   }
   throw new Error("Nenhum produto com estoque encontrado entre os primeiros da página inicial.");
 }
