@@ -164,7 +164,13 @@ export function IntegrationsForm({ initial, previews: initialPreviews, webhookUr
             disabled={(!v.stripeSecretKey && !previews.stripeSecretKey) || v.clearStripeSecretKey}
             onClick={() =>
               startStripe(async () => {
-                const r = await testStripeAction(v.stripeSecretKey || undefined);
+                let r: Awaited<ReturnType<typeof testStripeAction>>;
+                try {
+                  r = await testStripeAction(v.stripeSecretKey || undefined);
+                } catch {
+                  setStripeTest({ ok: false, text: "Falha de conexão. Tente de novo." });
+                  return;
+                }
                 setStripeTest(
                   r.ok && r.data
                     ? { ok: true, text: `Conectado (modo ${r.data.mode === "live" ? "produção" : "teste"})${r.data.account ? ` · ${r.data.account}` : ""}` }
@@ -294,7 +300,13 @@ export function IntegrationsForm({ initial, previews: initialPreviews, webhookUr
             loading={testingMaps}
             onClick={() =>
               startMaps(async () => {
-                const r = await testMapsAction({ provider: v.mapsProvider, apiKey: v.mapsApiKey || undefined });
+                let r: Awaited<ReturnType<typeof testMapsAction>>;
+                try {
+                  r = await testMapsAction({ provider: v.mapsProvider, apiKey: v.mapsApiKey || undefined });
+                } catch {
+                  setMapsTest({ ok: false, text: "Falha de conexão. Tente de novo." });
+                  return;
+                }
                 setMapsTest(r.ok ? { ok: true, data: r.data, text: r.message ?? "Funcionando." } : { ok: false, text: r.error });
                 if (!r.ok) toast.error("O teste do mapa falhou.");
               })

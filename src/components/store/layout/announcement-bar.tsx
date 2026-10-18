@@ -38,28 +38,31 @@ export function AnnouncementBar({ text, href }: { text: string; href?: string })
 
   return (
     <div role="region" aria-label="Aviso da loja" className="relative border-b border-border bg-card">
-      <div className="container-page flex min-h-9 items-center justify-center py-2 pr-10 sm:pl-10">
-        {href ? (
-          external ? (
-            <a href={href} target="_blank" rel="noopener noreferrer" className={`${cls} hover:text-foreground`}>
-              {content}
-            </a>
+      {/* O respiro para o botão de fechar fica num div interno: o container-page redefine o padding lateral. */}
+      <div className="container-page">
+        <div className="flex min-h-10 items-center justify-center py-2 pr-9 sm:px-10">
+          {href ? (
+            external ? (
+              <a href={href} target="_blank" rel="noopener noreferrer" className={`${cls} -my-2 py-2 hover:text-foreground`}>
+                {content}
+              </a>
+            ) : (
+              <Link href={href} className={`${cls} -my-2 py-2 hover:text-foreground`}>
+                {content}
+              </Link>
+            )
           ) : (
-            <Link href={href} className={`${cls} hover:text-foreground`}>
-              {content}
-            </Link>
-          )
-        ) : (
-          <p className={cls}>{content}</p>
-        )}
+            <p className={cls}>{content}</p>
+          )}
+        </div>
       </div>
       <button
         type="button"
         onClick={dismiss}
         aria-label="Fechar aviso"
-        className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-subtle hover:bg-elevated hover:text-foreground sm:right-3"
+        className="absolute right-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-subtle hover:bg-elevated hover:text-foreground sm:right-3"
       >
-        <X className="size-4" />
+        <X className="size-4" aria-hidden />
       </button>
     </div>
   );

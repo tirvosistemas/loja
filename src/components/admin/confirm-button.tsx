@@ -44,7 +44,14 @@ export function ConfirmButton({
               loading={pending}
               onClick={() =>
                 start(async () => {
-                  const r = await onConfirm();
+                  let r: ActionResult<unknown> | void;
+                  try {
+                    r = await onConfirm();
+                  } catch {
+                    // Sem isto a falha subiria para a tela de erro e o diálogo some sem explicação.
+                    toast.error("Falha de conexão. Tente de novo.");
+                    return;
+                  }
                   if (r && !r.ok) toast.error(r.error);
                   else {
                     if (successMessage) toast.success(successMessage);

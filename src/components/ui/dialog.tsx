@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
@@ -26,6 +26,9 @@ function useEsc(open: boolean, onClose: () => void) {
   }, [open, onClose]);
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Foco no primeiro campo ao abrir, Tab preso dentro da janela e foco de volta ao fechar. */
 function useFocusFirst(open: boolean, ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     if (!open) return;
@@ -34,8 +37,33 @@ function useFocusFirst(open: boolean, ref: React.RefObject<HTMLElement | null>) 
       const el = ref.current?.querySelector<HTMLElement>("[autofocus], input, select, textarea, button:not([data-close])");
       (el ?? ref.current)?.focus();
     }, 30);
+    const trap = (e: KeyboardEvent) => {
+      const box = ref.current;
+      if (e.key !== "Tab" || !box) return;
+      const items = Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null || el === document.activeElement);
+      if (items.length === 0) {
+        e.preventDefault();
+        box.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !box.contains(active)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && (active === first || active === box)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", trap);
     return () => {
       clearTimeout(t);
+      document.removeEventListener("keydown", trap);
       prev?.focus?.();
     };
   }, [open, ref]);
@@ -51,6 +79,7 @@ export function Dialog({
   footer,
   className,
   size = "md",
+  label,
 }: {
   open: boolean;
   onClose: () => void;
@@ -60,8 +89,12 @@ export function Dialog({
   footer?: ReactNode;
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  /** Nome acessível quando a janela não tem título visível. */
+  label?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const descId = useId();
   useLockScroll(open);
   useEsc(open, onClose);
   useFocusFirst(open, ref);
@@ -82,6 +115,9 @@ export function Dialog({
             ref={ref}
             role="dialog"
             aria-modal="true"
+            aria-label={label}
+            aria-labelledby={!label && title ? titleId : undefined}
+            aria-describedby={description ? descId : undefined}
             tabIndex={-1}
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -96,11 +132,19 @@ export function Dialog({
             {(title || description) && (
               <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
                 <div className="min-w-0">
-                  {title && <h2 className="text-lg font-semibold">{title}</h2>}
-                  {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+                  {title && (
+                    <h2 id={titleId} className="text-lg font-semibold">
+                      {title}
+                    </h2>
+                  )}
+                  {description && (
+                    <p id={descId} className="mt-0.5 text-sm text-muted-foreground">
+                      {description}
+                    </p>
+                  )}
                 </div>
-                <button data-close type="button" onClick={onClose} aria-label="Fechar" className="-mr-2 grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-elevated hover:text-foreground">
-                  <X className="size-5" />
+                <button data-close type="button" onClick={onClose} aria-label="Fechar" className="-mr-2 grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-elevated hover:text-foreground">
+                  <X className="size-5" aria-hidden />
                 </button>
               </div>
             )}
@@ -123,6 +167,7 @@ export function Sheet({
   children,
   footer,
   className,
+  label,
 }: {
   open: boolean;
   onClose: () => void;
@@ -131,8 +176,11 @@ export function Sheet({
   children?: ReactNode;
   footer?: ReactNode;
   className?: string;
+  /** Nome acessível quando a gaveta não tem título visível. */
+  label?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   useLockScroll(open);
   useEsc(open, onClose);
   useFocusFirst(open, ref);
@@ -153,6 +201,8 @@ export function Sheet({
             ref={ref}
             role="dialog"
             aria-modal="true"
+            aria-label={label}
+            aria-labelledby={!label && title !== undefined ? titleId : undefined}
             tabIndex={-1}
             initial={from}
             animate={{ x: 0, y: 0 }}
@@ -162,9 +212,11 @@ export function Sheet({
           >
             {title !== undefined && (
               <div className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border px-5">
-                <div className="min-w-0 text-base font-semibold">{title}</div>
-                <button data-close type="button" onClick={onClose} aria-label="Fechar" className="-mr-2 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-elevated hover:text-foreground">
-                  <X className="size-5" />
+                <div id={titleId} className="min-w-0 text-base font-semibold">
+                  {title}
+                </div>
+                <button data-close type="button" onClick={onClose} aria-label="Fechar" className="-mr-2 grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-elevated hover:text-foreground">
+                  <X className="size-5" aria-hidden />
                 </button>
               </div>
             )}

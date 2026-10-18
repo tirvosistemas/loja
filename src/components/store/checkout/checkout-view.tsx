@@ -79,6 +79,8 @@ export function CheckoutView({ config }: { config: CheckoutConfig }) {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [waitingQuote, setWaitingQuote] = useState(false);
   const sent = useRef(false);
+  // O aviso geral veio da validação dos campos (some sozinho quando todos forem corrigidos).
+  const validationBanner = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -191,7 +193,15 @@ export function CheckoutView({ config }: { config: CheckoutConfig }) {
     formRef.current?.requestSubmit();
   }, [waitingQuote, loading]);
 
+  useEffect(() => {
+    if (validationBanner.current && Object.keys(errors).length === 0) {
+      validationBanner.current = false;
+      setFormError(null);
+    }
+  }, [errors]);
+
   const showErrors = (errs: FieldErrors, message: string) => {
+    validationBanner.current = true;
     setErrors(errs);
     setFormError(message);
     if (errs.couponCode) setSummaryOpen(true);
@@ -201,6 +211,7 @@ export function CheckoutView({ config }: { config: CheckoutConfig }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting || sent.current) return;
+    validationBanner.current = false;
     setFormError(null);
     if (loading) {
       setWaitingQuote(true);

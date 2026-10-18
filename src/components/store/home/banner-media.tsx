@@ -43,8 +43,23 @@ const ALIGN = {
   right: "items-end text-left md:items-center md:justify-end md:text-right",
 } as const;
 
-/** Textos sobre a foto. "dark" = texto claro sobre foto escura; "light" = texto escuro. */
-export function BannerOverlay({ banner, size = "hero", as: Heading = "h2" }: { banner: BannerDTO; size?: "hero" | "strip"; as?: "h1" | "h2" | "h3" }) {
+/**
+ * Textos sobre a foto. "dark" = texto claro sobre foto escura; "light" = texto escuro.
+ * `controls`: reserva espaço embaixo para as bolinhas do carrossel (no celular o texto fica no rodapé).
+ */
+export function BannerOverlay({
+  banner,
+  size = "hero",
+  as: Heading = "h2",
+  controls,
+  textClassName,
+}: {
+  banner: BannerDTO;
+  size?: "hero" | "strip";
+  as?: "h1" | "h2" | "h3";
+  controls?: boolean;
+  textClassName?: string;
+}) {
   const dark = banner.theme !== "light";
   const align = banner.align ?? "left";
   const hasText = !!(banner.title || banner.subtitle || banner.eyebrow || banner.ctaLabel);
@@ -67,8 +82,16 @@ export function BannerOverlay({ banner, size = "hero", as: Heading = "h2" }: { b
   return (
     <>
       <div aria-hidden className={cn("absolute inset-0", shade)} />
-      <div className={cn("absolute inset-0 flex", ALIGN[align], hero ? "p-6 sm:p-10 lg:p-16" : "p-5 sm:p-8")}>
-        <div className={cn("max-w-xl", dark ? "text-white" : "text-zinc-950", align === "center" && "mx-auto")}>
+      <div
+        className={cn(
+          "absolute inset-0 flex",
+          ALIGN[align],
+          // No computador as setas ficam nas laterais: o texto começa depois delas.
+          hero ? "p-6 sm:p-10 md:px-20 lg:p-16 lg:px-20" : "p-5 sm:p-8",
+          hero && controls && "pb-16 sm:pb-16 md:pb-10 lg:pb-16",
+        )}
+      >
+        <div className={cn("max-w-xl", dark ? "text-white" : "text-zinc-950", align === "center" && "mx-auto", textClassName)}>
           {banner.eyebrow && (
             <p
               className={cn(

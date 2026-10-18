@@ -86,13 +86,13 @@ export function ProductCard({ product, priority, className }: { product: Product
         onClick={() => toggleWish(product.id)}
         aria-label={wished ? "Remover dos favoritos" : "Salvar nos favoritos"}
         aria-pressed={wished}
-        className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/90 text-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white"
+        className="absolute right-2.5 top-2.5 grid size-10 place-items-center rounded-full bg-white/90 text-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white"
       >
         <Heart className={cn("size-4.5", wished && "fill-[#ff5500] text-[#ff5500]")} />
       </button>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center justify-between gap-2 text-[12px] text-subtle">
+        <div className="flex h-5 items-center justify-between gap-2 text-[12px] text-subtle">
           <span className="truncate uppercase tracking-wider">{product.brand ?? " "}</span>
           {product.voltage && <span className="shrink-0 rounded-md border border-border px-1.5 py-px font-mono text-[11px]">{product.voltage}</span>}
         </div>
@@ -100,6 +100,12 @@ export function ProductCard({ product, priority, className }: { product: Product
           {product.name}
         </Link>
         {product.ratingCount > 0 && <Rating value={product.ratingAvg} count={product.ratingCount} />}
+        {/* Acima do preço (e não embaixo do botão) para os botões ficarem alinhados na fileira. */}
+        {product.freeShipping && (
+          <p className="flex items-center gap-1.5 text-[12px] font-medium text-success">
+            <Truck className="size-3.5" aria-hidden /> Frete grátis
+          </p>
+        )}
         <Price
           className="mt-auto pt-1"
           priceCents={product.priceCents}
@@ -127,11 +133,6 @@ export function ProductCard({ product, priority, className }: { product: Product
             </button>
           )}
         </div>
-        {product.freeShipping && (
-          <p className="flex items-center gap-1.5 text-[12px] font-medium text-success">
-            <Truck className="size-3.5" /> Frete grátis
-          </p>
-        )}
       </div>
     </article>
   );

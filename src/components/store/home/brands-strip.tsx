@@ -38,9 +38,10 @@ export function BrandsStrip({ brands }: { brands: Brand[] }) {
       <SectionHeader id="marcas-titulo" eyebrow="Marcas" title="Trabalhamos com as marcas que você confia" />
       {marquee ? (
         <div className="group/marquee relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] motion-reduce:[mask-image:none]">
-          <ul className="flex w-max animate-marquee group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused] motion-reduce:w-auto motion-reduce:flex-wrap motion-reduce:animate-none">
+          {/* Sem animação (movimento reduzido): grade com colunas iguais em vez da faixa. */}
+          <ul className="flex w-max animate-marquee group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused] motion-reduce:grid motion-reduce:w-auto motion-reduce:animate-none motion-reduce:grid-cols-2 motion-reduce:gap-3 sm:motion-reduce:grid-cols-3 md:motion-reduce:grid-cols-4 lg:motion-reduce:grid-cols-6">
             {[...brands, ...brands].map((b, i) => (
-              <li key={`${b.id}-${i}`} aria-hidden={i >= brands.length || undefined} className={i >= brands.length ? "pr-3 motion-reduce:hidden" : "pr-3 motion-reduce:pb-3"}>
+              <li key={`${b.id}-${i}`} aria-hidden={i >= brands.length || undefined} className={i >= brands.length ? "pr-3 motion-reduce:hidden" : "pr-3 motion-reduce:pr-0 motion-reduce:[&>a]:min-w-0"}>
                 <BrandChip brand={b} hidden={i >= brands.length} />
               </li>
             ))}

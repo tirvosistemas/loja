@@ -127,7 +127,8 @@ export const productSchema = z
     if (v.compareAtCents != null && v.compareAtCents <= v.priceCents) {
       ctx.addIssue({ code: "custom", path: ["compareAtCents"], message: "O preço “de” precisa ser maior que o preço de venda." });
     }
-    if (!slugify(v.slug || v.name)) ctx.addIssue({ code: "custom", path: ["slug"], message: "Informe a URL do produto." });
+    // Sem nome o erro já aparece no nome; a URL só reclama quando há texto e ele não vira endereço.
+    if (!slugify(v.slug || v.name) && (v.slug || v.name.length >= 2)) ctx.addIssue({ code: "custom", path: ["slug"], message: "Informe a URL do produto." });
 
     const joined = v.tags.filter(Boolean).join(", ");
     if (joined.length > 500) ctx.addIssue({ code: "custom", path: ["tags"], message: "As tags somam mais de 500 caracteres. Remova algumas." });

@@ -155,7 +155,7 @@ export function Footer({
             )}
             {store.phone && (
               <li>
-                <a href={`tel:+55${store.phone.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "")}`} className="flex items-start gap-2.5 text-muted-foreground hover:text-foreground">
+                <a href={`tel:+55${store.phone.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "")}`} className="-my-1.5 flex items-start gap-2.5 py-1.5 text-muted-foreground hover:text-foreground">
                   <Phone className="mt-0.5 size-4 shrink-0 text-subtle" aria-hidden />
                   {formatPhone(store.phone)}
                 </a>
@@ -163,7 +163,7 @@ export function Footer({
             )}
             {store.email && (
               <li>
-                <a href={`mailto:${store.email}`} className="flex items-start gap-2.5 break-all text-muted-foreground hover:text-foreground">
+                <a href={`mailto:${store.email}`} className="-my-1.5 flex items-start gap-2.5 break-all py-1.5 text-muted-foreground hover:text-foreground">
                   <Mail className="mt-0.5 size-4 shrink-0 text-subtle" aria-hidden />
                   {store.email}
                 </a>

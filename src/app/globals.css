@@ -18,6 +18,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
+  /* Laranja da marca sempre puro (títulos grandes, estrelas); para texto pequeno use text-primary. */
+  --color-brand: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
@@ -60,13 +62,14 @@
   --elevated: #141418;
   --muted: #18181b;
   --muted-foreground: #a1a1aa;
-  --subtle: #71717a;
+  --subtle: #84848d;
   --border: #212127;
   --border-strong: #2e2e36;
   --input: #27272a;
   --ring: #ff5500;
   --primary: #ff5500;
   --primary-hover: #ff6a1f;
+  --primary-text: #ff5500;
   --primary-foreground: #09090b;
   --primary-soft: rgb(255 85 0 / 0.12);
   --inverse: #f4f4f5;
@@ -90,26 +93,28 @@
   --elevated: #f4f4f5;
   --muted: #f4f4f5;
   --muted-foreground: #52525b;
-  --subtle: #71717a;
+  --subtle: #6b6b74;
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
   --input: #d4d4d8;
   --ring: #ff5500;
   --primary: #ff5500;
   --primary-hover: #e64d00;
+  /* Texto laranja no fundo claro: tom mais escuro para manter o contraste (AA). */
+  --primary-text: #c24100;
   --primary-foreground: #09090b;
   --primary-soft: rgb(255 85 0 / 0.1);
   --inverse: #09090b;
   --inverse-foreground: #f4f4f5;
   --well: #f4f4f5;
-  --success: #16a34a;
-  --success-soft: rgb(22 163 74 / 0.1);
-  --warning: #d97706;
-  --warning-soft: rgb(217 119 6 / 0.1);
-  --danger: #dc2626;
-  --danger-soft: rgb(220 38 38 / 0.1);
-  --info: #0284c7;
-  --info-soft: rgb(2 132 199 / 0.1);
+  --success: #147a3a;
+  --success-soft: rgb(20 122 58 / 0.1);
+  --warning: #b45309;
+  --warning-soft: rgb(180 83 9 / 0.1);
+  --danger: #b91c1c;
+  --danger-soft: rgb(185 28 28 / 0.1);
+  --info: #0369a1;
+  --info-soft: rgb(3 105 161 / 0.1);
 }
 
 @layer base {
@@ -203,6 +208,10 @@
   }
   .safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  /* Texto laranja acompanha o tema (no claro fica mais escuro); fundos e bordas seguem no #ff5500. */
+  .text-primary {
+    color: var(--primary-text);
   }
 }
 

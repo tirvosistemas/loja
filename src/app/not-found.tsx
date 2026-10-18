@@ -12,10 +12,10 @@ export default function NotFound() {
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
         <div className="container-page flex h-16 items-center justify-between">
-          <Link href="/" aria-label="Tirvo — página inicial" className="text-foreground">
+          <Link href="/" aria-label="Tirvo — página inicial" className="flex h-10 items-center text-foreground">
             <Logo className="h-7" title="Tirvo" />
           </Link>
-          <Link href="/ofertas" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <Link href="/ofertas" className="flex h-10 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <span aria-hidden className="size-2 rounded-full bg-primary animate-pulse-dot" /> Ofertas
           </Link>
         </div>

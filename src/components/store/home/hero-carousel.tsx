@@ -13,7 +13,7 @@ function Slide({ banner, index, total, mobileAspect }: { banner: BannerDTO; inde
   const body = (
     <>
       <BannerPicture banner={banner} priority={index === 0} />
-      <BannerOverlay banner={banner} as="h2" />
+      <BannerOverlay banner={banner} as="h2" controls={total > 1} />
     </>
   );
   const cls = cn("relative block overflow-hidden bg-elevated md:aspect-[1920/720]", mobileAspect);
@@ -152,7 +152,7 @@ export function HeroCarousel({ banners, autoplayMs }: { banners: BannerDTO[]; au
             </button>
 
             <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1 md:bottom-5">
-              <div className="flex items-center gap-0.5 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur">
+              <div className="flex items-center rounded-full bg-black/40 px-1 backdrop-blur">
                 {banners.map((b, i) => (
                   <button
                     key={b.id}
@@ -160,7 +160,7 @@ export function HeroCarousel({ banners, autoplayMs }: { banners: BannerDTO[]; au
                     onClick={() => go(i)}
                     aria-label={`Ir para o banner ${i + 1} de ${banners.length}`}
                     aria-current={selected === i ? "true" : undefined}
-                    className="grid h-8 min-w-6 place-items-center"
+                    className="grid h-10 min-w-8 place-items-center"
                   >
                     <span
                       aria-hidden
@@ -173,7 +173,7 @@ export function HeroCarousel({ banners, autoplayMs }: { banners: BannerDTO[]; au
                     type="button"
                     onClick={togglePause}
                     aria-label={paused ? "Retomar troca automática" : "Pausar troca automática"}
-                    className="grid size-8 place-items-center rounded-full text-white/80 hover:text-white"
+                    className="grid size-10 place-items-center rounded-full text-white/80 hover:text-white"
                   >
                     {paused ? <Play className="size-3.5" aria-hidden /> : <Pause className="size-3.5" aria-hidden />}
                   </button>

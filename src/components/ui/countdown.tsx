@@ -19,7 +19,7 @@ export function Countdown({ endsAt, className, compact }: { endsAt: string; clas
   const p = now == null ? null : parts(new Date(endsAt).getTime() - now);
   const pad = (n?: number) => (n == null ? "--" : String(n).padStart(2, "0"));
   const blocks = [
-    ...(p && p.d > 0 ? [{ v: String(p.d), l: "dias" }] : []),
+    ...(p && p.d > 0 ? [{ v: String(p.d), l: p.d === 1 ? "dia" : "dias" }] : []),
     { v: pad(p?.h), l: "h" },
     { v: pad(p?.m), l: "min" },
     { v: pad(p?.s), l: "s" },

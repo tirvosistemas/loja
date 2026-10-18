@@ -77,7 +77,7 @@ export function Header({ categories, whatsapp }: { categories: MenuCategory[]; w
             <Menu className="size-[22px]" aria-hidden />
           </button>
 
-          <Link href="/" aria-label="Tirvo — página inicial" className="shrink-0 rounded-lg text-foreground">
+          <Link href="/" aria-label="Tirvo — página inicial" className="flex h-10 shrink-0 items-center rounded-lg text-foreground">
             <AnimatedLogo className="h-7 md:h-8" title="Tirvo" />
           </Link>
 

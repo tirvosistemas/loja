@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
 import ANIM from "./logo-anim.json";
 
@@ -86,6 +86,8 @@ export function AnimatedLogo({ className, replayOnHover = true, title = "Tirvo" 
   const svg = useRef<SVGSVGElement>(null);
   const raf = useRef(0);
   const lastPlay = useRef(0);
+  // id único do filtro: o painel mostra duas logos na mesma página.
+  const blurId = `tv-halo-blur-${useId().replace(/[^\w-]/g, "")}`;
 
   const render = useCallback((t: number) => {
     const T = t - T0;
@@ -211,7 +213,7 @@ export function AnimatedLogo({ className, replayOnHover = true, title = "Tirvo" 
         @media (prefers-reduced-motion: reduce) { .tirvo-idle .tv-cur, .tirvo-idle .tv-halo { animation: none } }
       `}</style>
       <defs>
-        <filter id="tv-halo-blur" x="-150%" y="-150%" width="400%" height="400%" colorInterpolationFilters="sRGB">
+        <filter id={blurId} x="-150%" y="-150%" width="400%" height="400%" colorInterpolationFilters="sRGB">
           <feGaussianBlur stdDeviation="4" />
         </filter>
       </defs>
@@ -223,7 +225,7 @@ export function AnimatedLogo({ className, replayOnHover = true, title = "Tirvo" 
         </g>
         <path ref={ticks} d="M48.5 22h3v12h-3Z M48.5 66h3v12h-3Z M22 48.5h12v3h-12Z M66 48.5h12v3h-12Z" fill="currentColor" opacity={0} />
         <circle ref={ring} cx="50" cy="50" r="10" fill="none" stroke={ACC} strokeWidth="2" opacity={0} />
-        <circle ref={halo} className="tv-halo" cx="50" cy="50" r="11" fill={ACC} filter="url(#tv-halo-blur)" transform="scale(0)" />
+        <circle ref={halo} className="tv-halo" cx="50" cy="50" r="11" fill={ACC} filter={`url(#${blurId})`} transform="scale(0)" />
         <circle ref={dot} cx="50" cy="50" r="10" fill={ACC} transform="scale(0)" />
       </g>
       <g transform={`translate(${DATA.wx} 0)`}>

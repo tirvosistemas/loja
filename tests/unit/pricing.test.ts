@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDiscount, effectivePrice, pixPrice, scopeMatches, type PromoLite } from "@/lib/pricing";
+import { applyDiscount, computeTotals, effectivePrice, pixPrice, scopeMatches, type PromoLite } from "@/lib/pricing";
 
 // Promoções automáticas: a que dá o menor preço vence; "de" riscado só quando faz sentido.
 
@@ -116,5 +116,14 @@ describe("pixPrice", () => {
   it("aplica o desconto do Pix", () => {
     expect(pixPrice(10000, 5)).toBe(9500);
     expect(pixPrice(10000, 0)).toBe(10000);
+  });
+  it("bate com o desconto Pix do pedido (mesmo arredondamento)", () => {
+    // R$ 9.999,90 com 5%: desconto de R$ 499,995 arredonda para R$ 500,00 nos dois cálculos.
+    const total = computeTotals({ subtotalCents: 999990, couponDiscountCents: 0, shippingCents: 0, paymentMethod: "PIX_MANUAL", pixDiscountPercent: 5 });
+    expect(pixPrice(999990, 5)).toBe(999990 - total.pixDiscountCents);
+    for (const cents of [1999, 4990, 12345, 899990, 999990]) {
+      const t = computeTotals({ subtotalCents: cents, couponDiscountCents: 0, shippingCents: 0, paymentMethod: "PIX_MANUAL", pixDiscountPercent: 5 });
+      expect(pixPrice(cents, 5)).toBe(cents - t.pixDiscountCents);
+    }
   });
 });

@@ -20,7 +20,13 @@ export function BrandQuickCreate({ open, onClose, onCreated }: { open: boolean; 
 
   const submit = () =>
     start(async () => {
-      const r = await quickCreateBrand(name);
+      let r: Awaited<ReturnType<typeof quickCreateBrand>>;
+      try {
+        r = await quickCreateBrand(name);
+      } catch {
+        setError("Falha de conexão. Tente de novo.");
+        return;
+      }
       if (!r.ok) {
         setError(r.fieldErrors?.name ?? r.error);
         return;

@@ -39,7 +39,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
           <div className="min-w-0 max-w-2xl">
             <Eyebrow pulse>Ofertas</Eyebrow>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-              Desconto de verdade, <span className="text-primary">entrega rápida.</span>
+              Desconto de verdade, <span className="text-brand">entrega rápida.</span>
             </h1>
             <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground sm:text-base">
               Eletrodomésticos com preço baixo e entrega por motoboy em Curitiba e região.

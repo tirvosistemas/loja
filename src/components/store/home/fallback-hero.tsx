@@ -41,7 +41,7 @@ export function FallbackHero({ categoriesHref, cities }: { categoriesHref: strin
           <div className="animate-slide-up">
             <Eyebrow className="mb-5">Curitiba e região</Eyebrow>
             <h1 id="hero-titulo" className="max-w-2xl text-[1.875rem] font-semibold leading-[1.06] tracking-tight min-[400px]:text-4xl sm:text-5xl lg:text-6xl">
-              Eletrodomésticos com <span className="text-primary">entrega rápida</span> por motoboy
+              Eletrodomésticos com <span className="text-brand">entrega rápida</span> por motoboy
             </h1>
             <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
               Frete calculado na hora pelo CEP, sem surpresa no final. Pague online, no Pix ou só quando o produto chegar na sua casa.

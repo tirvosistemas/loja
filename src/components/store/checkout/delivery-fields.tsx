@@ -13,6 +13,9 @@ const UFS = ["PR", "SC", "SP", "RS", "MG", "RJ", "MS", "GO", "DF", "ES", "BA", "
 
 export type PickupInfo = { place: string | null; instructions: string; hours: string };
 
+// Ao trocar entre entrega e retirada, os erros do endereço deixam de valer (os campos somem).
+const ADDRESS_ERRORS = ["deliveryType", "address", "address.cep", "address.street", "address.number", "address.complement", "address.neighborhood", "address.city", "address.state", "address.reference"];
+
 export function DeliveryFields({
   form,
   errors,
@@ -111,7 +114,7 @@ export function DeliveryFields({
         <div id="co-delivery" tabIndex={-1} className="outline-none">
           <Segmented
             value={form.deliveryType}
-            onChange={(v) => onChange({ deliveryType: v }, ["deliveryType", "address"])}
+            onChange={(v) => onChange({ deliveryType: v }, ADDRESS_ERRORS)}
             options={choices}
             className="flex w-full [&>button]:min-h-10"
           />
@@ -207,7 +210,7 @@ export function DeliveryFields({
               quoting={quoting}
               addressReady={addressReady}
               error={err("address")}
-              onPickup={options.pickup ? () => onChange({ deliveryType: "PICKUP" }, ["address", "deliveryType"]) : undefined}
+              onPickup={options.pickup ? () => onChange({ deliveryType: "PICKUP" }, ADDRESS_ERRORS) : undefined}
             />
           </div>
         </div>

@@ -19,7 +19,13 @@ export function AdminNotes({ orderId, initial }: { orderId: string; initial: str
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const r = await saveAdminNotesAction(orderId, value);
+          let r: Awaited<ReturnType<typeof saveAdminNotesAction>>;
+          try {
+            r = await saveAdminNotesAction(orderId, value);
+          } catch {
+            toast.error("Falha de conexão. Tente de novo.");
+            return;
+          }
           if (r.ok) {
             setSaved(value);
             toast.success(r.message ?? "Anotações salvas.");

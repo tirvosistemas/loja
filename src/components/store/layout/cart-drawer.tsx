@@ -84,7 +84,7 @@ function CartLine({ item }: { item: CartItem }) {
             type="button"
             onClick={() => remove(item.productId, item.variantId)}
             aria-label={`Remover ${item.name}`}
-            className="-mr-1.5 -mt-1 grid size-9 shrink-0 place-items-center rounded-lg text-subtle hover:bg-danger-soft hover:text-danger"
+            className="-mr-2 -mt-1.5 grid size-10 shrink-0 place-items-center rounded-lg text-subtle hover:bg-danger-soft hover:text-danger"
           >
             <Trash2 className="size-4" aria-hidden />
           </button>
@@ -127,6 +127,7 @@ export function CartDrawer({ freeShipping }: { freeShipping: FreeShipping }) {
       open={open}
       onClose={close}
       side="right"
+      label="Carrinho"
       title={
         <span className="flex items-center gap-2">
           Seu carrinho

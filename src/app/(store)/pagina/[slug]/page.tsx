@@ -84,14 +84,14 @@ export default async function InstitutionalPage({ params }: Props) {
               <ul className="mt-5 space-y-3 text-sm">
                 {store.phone && (
                   <li>
-                    <a href={`tel:${store.phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-3 text-muted-foreground hover:text-foreground">
+                    <a href={`tel:${store.phone.replace(/[^\d+]/g, "")}`} className="-my-1.5 flex items-center gap-3 py-1.5 text-muted-foreground hover:text-foreground">
                       <Phone className="size-4 shrink-0 text-subtle" aria-hidden /> {formatPhone(store.phone)}
                     </a>
                   </li>
                 )}
                 {store.email && (
                   <li>
-                    <a href={`mailto:${store.email}`} className="flex items-center gap-3 break-all text-muted-foreground hover:text-foreground">
+                    <a href={`mailto:${store.email}`} className="-my-1.5 flex items-center gap-3 break-all py-1.5 text-muted-foreground hover:text-foreground">
                       <Mail className="size-4 shrink-0 text-subtle" aria-hidden /> {store.email}
                     </a>
                   </li>

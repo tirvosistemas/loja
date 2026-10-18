@@ -119,8 +119,9 @@ export function effectivePrice(
   };
 }
 
+// Arredonda o desconto (não o preço final), igual ao total do pedido, para os valores baterem.
 export function pixPrice(priceCents: number, pixDiscountPercent: number) {
-  return pixDiscountPercent > 0 ? Math.round((priceCents * (100 - pixDiscountPercent)) / 100) : priceCents;
+  return pixDiscountPercent > 0 ? priceCents - Math.round((priceCents * pixDiscountPercent) / 100) : priceCents;
 }
 
 // ───────── Cupons

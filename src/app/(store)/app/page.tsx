@@ -116,7 +116,7 @@ export default async function AppPage() {
             <div>
               <Eyebrow className="mb-4">App {name}</Eyebrow>
               <h1 id="app-titulo" className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-                A {name} no seu celular, <span className="text-primary">como um app</span>
+                A {name} no seu celular, <span className="text-brand">como um app</span>
               </h1>
               <p className="mt-4 max-w-lg text-base text-muted-foreground sm:text-lg">
                 Instale direto do navegador, sem loja de aplicativos. Receba ofertas relâmpago e cupons por notificação e acompanhe seus pedidos com um toque.

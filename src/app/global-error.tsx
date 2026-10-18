@@ -29,7 +29,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
         <main style={{ maxWidth: 420 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/tirvo-logo-para-fundo-escuro.svg" alt="Tirvo" style={{ height: 32, width: "auto", margin: "0 auto 32px", display: "block" }} />
-          <p style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", margin: 0 }}>
+          <p style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "#84848d", margin: 0 }}>
             Erro inesperado
           </p>
           <h1 style={{ fontSize: 26, fontWeight: 600, margin: "8px 0 12px" }}>Algo deu errado por aqui</h1>

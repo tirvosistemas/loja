@@ -82,7 +82,7 @@ function StarPicker({ value, onChange, error }: { value: number; onChange: (n: n
           {[1, 2, 3, 4, 5].map((n) => (
             <label key={n} className="cursor-pointer rounded-lg p-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary" onMouseEnter={() => setHover(n)}>
               <input type="radio" name={name} value={n} checked={value === n} onChange={() => onChange(n)} className="sr-only" aria-label={`${n} ${n === 1 ? "estrela" : "estrelas"}: ${STAR_LABEL[n]}`} />
-              <Star className={cn("size-8 transition-colors", n <= shown ? "fill-primary text-primary" : "fill-transparent text-border-strong")} strokeWidth={1.5} aria-hidden />
+              <Star className={cn("size-8 transition-colors", n <= shown ? "fill-primary text-brand" : "fill-transparent text-border-strong")} strokeWidth={1.5} aria-hidden />
             </label>
           ))}
         </div>

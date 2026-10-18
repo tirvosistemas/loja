@@ -104,7 +104,7 @@ export function SaveBar({ dirty, pending, onReset, label = "Salvar alterações"
         </p>
         <div className="flex shrink-0 items-center gap-2">
           {dirty && (
-            <Button type="button" variant="ghost" onClick={onReset} disabled={pending}>
+            <Button type="button" variant="ghost" onClick={onReset} disabled={pending} aria-label="Desfazer alterações">
               <RotateCcw aria-hidden /> <span className="hidden sm:inline">Desfazer</span>
             </Button>
           )}

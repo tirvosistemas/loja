@@ -206,17 +206,18 @@ export function SearchAutocomplete({ inputId, className, placeholder = "Buscar g
                   inputRef.current?.focus();
                 }}
                 aria-label="Limpar busca"
-                className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-elevated hover:text-foreground"
+                className="relative grid size-8 place-items-center rounded-lg text-subtle before:absolute before:-inset-1 before:content-[''] hover:bg-elevated hover:text-foreground"
               >
-                <X className="size-4" />
+                <X className="size-4" aria-hidden />
               </button>
             )}
             <button
               type="submit"
               aria-label="Buscar"
-              className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary-hover"
+              // Área de toque de 40px (o desenho fica com 32px dentro do campo).
+              className="relative grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-primary-hover"
             >
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4" aria-hidden />
             </button>
           </div>
         </div>

@@ -49,7 +49,10 @@ export function ListingHeader({
   );
 }
 
-/** Cabeçalho da categoria: banner com foto (quando houver) ou faixa com o ícone. */
+/**
+ * Cabeçalho da categoria. A imagem da categoria é a mesma da grade da página inicial (produto
+ * recortado, quase quadrado): aparece inteira num quadro claro ao lado do título, não como fundo.
+ */
 export function CategoryHeader({
   category,
   icon,
@@ -61,43 +64,30 @@ export function CategoryHeader({
   breadcrumbs: { label: string; href?: string }[];
   eyebrow?: string;
 }) {
-  const hasImage = !!category.image;
   return (
     <header>
       <Breadcrumbs items={breadcrumbs} />
-      <div
-        className={cn(
-          "relative mt-4 overflow-hidden rounded-3xl border border-border sm:mt-5",
-          hasImage ? "min-h-48 sm:min-h-60" : "bg-card",
-        )}
-      >
-        {hasImage ? (
-          <>
-            <SmartImage src={category.image} alt="" size="lg" sizes="100vw" priority className="absolute inset-0 size-full object-cover" />
-            <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/55 to-black/10" aria-hidden />
-          </>
-        ) : (
-          <>
-            <div className="bg-grid pointer-events-none absolute inset-0" aria-hidden />
-            <div className="glow-orange pointer-events-none absolute -right-24 -top-24 size-80" aria-hidden />
-          </>
-        )}
+      <div className="relative mt-4 overflow-hidden rounded-3xl border border-border bg-card sm:mt-5">
+        <div className="bg-grid pointer-events-none absolute inset-0" aria-hidden />
+        <div className="glow-orange pointer-events-none absolute -right-24 -top-24 size-80" aria-hidden />
         <div className="relative flex items-center gap-5 p-6 sm:p-8 lg:p-10">
-          {!hasImage && (
+          {category.image ? (
+            <div className="relative hidden size-20 shrink-0 overflow-hidden rounded-2xl border border-border bg-well sm:block lg:size-24">
+              <SmartImage src={category.image} alt="" size="sm" sizes="96px" priority className="size-full object-contain p-2" />
+            </div>
+          ) : (
             <div className="relative hidden size-20 shrink-0 place-items-center rounded-2xl border border-border-strong bg-elevated text-foreground sm:grid lg:size-24">
               <CategoryIcon name={icon} className="size-9 lg:size-10" />
               <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" aria-hidden />
             </div>
           )}
-          <div className={cn("min-w-0 max-w-2xl", hasImage && "py-4 text-white")}>
-            <p className={cn("flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em]", hasImage ? "text-white/70" : "text-subtle")}>
+          <div className="min-w-0 max-w-2xl">
+            <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-subtle">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden />
               {eyebrow}
             </p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">{category.name}</h1>
-            {category.description && (
-              <p className={cn("mt-2 line-clamp-3 text-[15px] leading-relaxed", hasImage ? "text-white/80" : "text-muted-foreground")}>{category.description}</p>
-            )}
+            {category.description && <p className="mt-2 line-clamp-3 text-[15px] leading-relaxed text-muted-foreground">{category.description}</p>}
           </div>
         </div>
       </div>

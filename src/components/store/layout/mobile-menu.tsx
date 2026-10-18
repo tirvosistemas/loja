@@ -36,7 +36,7 @@ export function MobileMenu({ categories, whatsapp }: { categories: MenuCategory[
   ];
 
   return (
-    <Sheet open={open} onClose={close} side="left" title={<Logo className="h-6" title="Tirvo" />}>
+    <Sheet open={open} onClose={close} side="left" label="Menu da loja" title={<Logo className="h-6" title="Tirvo" />}>
       <nav aria-label="Menu" className="flex min-h-full flex-col">
         <ul className="border-b border-border px-3 py-3">
           {quick.map((q) => (

@@ -13,8 +13,9 @@ export function OffersGrid({ products }: { products: ProductCardDTO[] }) {
     <section aria-labelledby="ofertas-titulo" className="container-page">
       <SectionHeader id="ofertas-titulo" eyebrow="Preço baixo" title="Ofertas da semana" href="/ofertas" hrefLabel="Ver todas as ofertas" />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
-        {list.map((p) => (
-          <ProductCard key={p.id} product={p} />
+        {list.map((p, i) => (
+          // Em 3 colunas (tablet/notebook) mostra só 6, para não sobrar uma linha pela metade.
+          <ProductCard key={p.id} product={p} className={i >= 6 ? "md:max-xl:hidden" : undefined} />
         ))}
       </div>
       <div className="mt-6 flex justify-center">

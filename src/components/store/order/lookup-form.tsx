@@ -72,7 +72,7 @@ export function LookupForm({ initialCode = "" }: { initialCode?: string }) {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          placeholder="TV7K2Q9"
+          placeholder="TV7K2Q9X"
           maxLength={16}
           value={code}
           onChange={(e) => {

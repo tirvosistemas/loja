@@ -21,7 +21,13 @@ export function OwnNameForm({ initial }: { initial: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const r = await updateOwnNameAction({ name });
+          let r: Awaited<ReturnType<typeof updateOwnNameAction>>;
+          try {
+            r = await updateOwnNameAction({ name });
+          } catch {
+            toast.error("Falha de conexão. Tente de novo.");
+            return;
+          }
           if (!r.ok) {
             setError(r.fieldErrors?.name ?? r.error);
             toast.error(r.error);
@@ -61,7 +67,13 @@ export function OwnPasswordForm({ email }: { email: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const r = await changeOwnPasswordAction(v);
+          let r: Awaited<ReturnType<typeof changeOwnPasswordAction>>;
+          try {
+            r = await changeOwnPasswordAction(v);
+          } catch {
+            toast.error("Falha de conexão. Tente de novo.");
+            return;
+          }
           if (!r.ok) {
             setErrors(r.fieldErrors ?? {});
             toast.error(r.error);

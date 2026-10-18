@@ -120,7 +120,8 @@ function ShareButton({ name, slug }: { name: string; slug: string }) {
             </button>
             <a
               role="menuitem"
-              href={`https://wa.me/?text=${encodeURIComponent(`${name}\n${url()}`)}`}
+              // api.whatsapp.com e não wa.me: o redirecionamento do wa.me corrompe emojis.
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${name}\n${url()}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setOpen(false)}
@@ -239,7 +240,7 @@ export function BuyBox({ storeWhatsapp, productUrl }: { storeWhatsapp: string; p
         <div className="min-w-0">
           {product.brand &&
             (product.brandSlug ? (
-              <Link href={`/marca/${product.brandSlug}`} className="font-mono text-xs uppercase tracking-[0.16em] text-subtle transition-colors hover:text-primary">
+              <Link href={`/marca/${product.brandSlug}`} className="-my-3 inline-block py-3 font-mono text-xs uppercase tracking-[0.16em] text-subtle transition-colors hover:text-primary">
                 {product.brand}
               </Link>
             ) : (

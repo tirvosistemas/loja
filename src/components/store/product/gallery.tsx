@@ -33,6 +33,8 @@ function ZoomImage({ img, alt, active, priority, onOpen, enabled }: { img: Img; 
     <button
       type="button"
       onClick={onOpen}
+      // Só a foto visível entra no Tab (as outras ficam fora da tela, no carrossel).
+      tabIndex={active ? undefined : -1}
       aria-label={`Ampliar imagem: ${alt}`}
       className={cn("relative block size-full overflow-hidden bg-well", enabled ? "cursor-zoom-in" : "cursor-pointer")}
       onMouseMove={(e) => {

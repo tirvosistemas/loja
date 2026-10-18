@@ -237,7 +237,13 @@ export function ProductForm({
     if (!productId) return;
     if (dirty && !window.confirm("A cópia é feita a partir do que está salvo. As alterações não salvas não vão junto. Continuar?")) return;
     start(async () => {
-      const r = await duplicateProduct(productId);
+      let r: Awaited<ReturnType<typeof duplicateProduct>>;
+      try {
+        r = await duplicateProduct(productId);
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+        return;
+      }
       if (!r.ok) {
         toast.error(r.error);
         return;

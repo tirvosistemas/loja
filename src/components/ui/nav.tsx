@@ -10,7 +10,7 @@ export function Breadcrumbs({ items, className }: { items: { label: string; href
           <li key={i} className="flex min-w-0 items-center gap-1">
             {i > 0 && <ChevronRight className="size-3.5 shrink-0" aria-hidden />}
             {it.href ? (
-              <Link href={it.href} className="truncate hover:text-foreground">
+              <Link href={it.href} className="-my-2.5 truncate py-2.5 hover:text-foreground">
                 {it.label}
               </Link>
             ) : (

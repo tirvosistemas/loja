@@ -40,7 +40,7 @@ export function SectionHeader({
         {description && <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">{description}</p>}
       </div>
       {href && (
-        <Link href={href} className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary sm:flex">
+        <Link href={href} className="-my-2.5 hidden shrink-0 items-center gap-1.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-primary sm:flex">
           {hrefLabel} <ArrowRight className="size-4" aria-hidden />
         </Link>
       )}

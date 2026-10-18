@@ -135,7 +135,9 @@ function Hero({ kind, order, whatsappUrl, autoOpenWhatsapp, stripeAvailable }: O
       <div className="relative max-w-2xl">
         <span className={cn("grid size-12 place-items-center rounded-2xl [&_svg]:size-6", toneClass)}>{c.icon}</span>
         <Eyebrow className="mt-5">
-          Pedido #{code} · {formatDateTime(order.createdAt)}
+          <span>
+            Pedido #{code} · <span className="whitespace-nowrap">{formatDateTime(order.createdAt)}</span>
+          </span>
         </Eyebrow>
         <h1 id="pedido-titulo" className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
           {c.title}
@@ -198,7 +200,7 @@ export function OrderView(props: OrderViewProps) {
                       )}
                       <p className="mt-0.5 text-[13px] text-subtle">
                         {it.variantName ? `${it.variantName} · ` : ""}
-                        {it.quantity} × <span className="tabular">{formatBRL(it.unitPriceCents)}</span>
+                        {it.quantity} × <span className="tabular whitespace-nowrap">{formatBRL(it.unitPriceCents)}</span>
                       </p>
                     </div>
                     <div className="tabular shrink-0 text-right">

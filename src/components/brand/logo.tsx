@@ -40,14 +40,17 @@ export function LogoMark({ className, title = "Tirvo" }: { className?: string; t
   );
 }
 
+// As imagens abaixo têm duas versões (tema escuro e claro) e loading="lazy": assim o navegador
+// não baixa a versão escondida e o React não as pré-carrega em toda página (o 404 vai junto no RSC).
+
 /** Logo com a frase (arquivo do kit; troca a versão conforme o tema). */
 export function LogoWithTagline({ className }: { className?: string }) {
   return (
     <span className={cn("block", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/tirvo-logo-com-frase-para-fundo-escuro.svg" alt="Tirvo. Se algo pode ser melhorado, ainda não está pronto." className="hidden h-full w-auto dark:block" />
+      <img src="/brand/tirvo-logo-com-frase-para-fundo-escuro.svg" alt="Tirvo. Se algo pode ser melhorado, ainda não está pronto." loading="lazy" decoding="async" className="hidden h-full w-auto dark:block" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/tirvo-logo-com-frase-para-fundo-claro.svg" alt="Tirvo. Se algo pode ser melhorado, ainda não está pronto." className="block h-full w-auto dark:hidden" />
+      <img src="/brand/tirvo-logo-com-frase-para-fundo-claro.svg" alt="Tirvo. Se algo pode ser melhorado, ainda não está pronto." loading="lazy" decoding="async" className="block h-full w-auto dark:hidden" />
     </span>
   );
 }
@@ -57,9 +60,9 @@ export function NextMascot({ className }: { className?: string }) {
   return (
     <span className={cn("block", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/tirvo-next-em-cima-para-fundo-escuro.svg" alt="Next, o mascote da Tirvo" className="hidden h-full w-auto dark:block" />
+      <img src="/brand/tirvo-next-em-cima-para-fundo-escuro.svg" alt="Next, o mascote da Tirvo" loading="lazy" decoding="async" className="hidden h-full w-auto dark:block" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/tirvo-next-em-cima-para-fundo-claro.svg" alt="Next, o mascote da Tirvo" className="block h-full w-auto dark:hidden" />
+      <img src="/brand/tirvo-next-em-cima-para-fundo-claro.svg" alt="Next, o mascote da Tirvo" loading="lazy" decoding="async" className="block h-full w-auto dark:hidden" />
     </span>
   );
 }

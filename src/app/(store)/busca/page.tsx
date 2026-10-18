@@ -42,7 +42,7 @@ export default async function SearchPage({ searchParams }: Props) {
           title={
             q ? (
               <>
-                Resultados para <span className="text-primary">“{q}”</span>
+                Resultados para <span className="text-brand">“{q}”</span>
               </>
             ) : (
               "Todos os produtos"

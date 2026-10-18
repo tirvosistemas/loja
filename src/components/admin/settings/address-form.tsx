@@ -79,7 +79,13 @@ export function AddressForm({ initial }: { initial: AddressFormValues }) {
         toast.error("Salve as alterações do endereço antes de localizar de novo.");
         return;
       }
-      const r = await relocateStoreAction();
+      let r: Awaited<ReturnType<typeof relocateStoreAction>>;
+      try {
+        r = await relocateStoreAction();
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+        return;
+      }
       if (!r.ok) {
         toast.error(r.error);
         return;

@@ -16,6 +16,7 @@ export function CategoryNav({ categories }: { categories: MenuCategory[] }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const quickRef = useRef<HTMLUListElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverOpened = useRef(false);
   const [open, setOpen] = useState(false);
@@ -46,6 +47,20 @@ export function CategoryNav({ categories }: { categories: MenuCategory[] }) {
   }, []);
 
   useEffect(() => close(), [pathname, close]);
+
+  // Atalhos de categoria: só os que cabem inteiros na linha. Os que quebram para a linha de
+  // baixo (cortada pelo overflow) ficam invisíveis e fora do Tab; todos estão no menu ao lado.
+  useEffect(() => {
+    const ul = quickRef.current;
+    if (!ul) return;
+    const fit = () => {
+      for (const li of Array.from(ul.children) as HTMLElement[]) li.style.visibility = li.offsetTop > 4 ? "hidden" : "";
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(ul);
+    return () => ro.disconnect();
+  }, [categories]);
   useEffect(() => () => clearTimer(), []);
 
   useEffect(() => {
@@ -228,7 +243,7 @@ export function CategoryNav({ categories }: { categories: MenuCategory[] }) {
         </div>
       )}
 
-      <ul className="no-scrollbar flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+      <ul ref={quickRef} className="relative flex h-9 min-w-0 flex-1 flex-wrap items-center gap-x-0.5 overflow-hidden">
         {categories.slice(0, 8).map((c) => {
           const current = pathname === `/categoria/${c.slug}`;
           return (

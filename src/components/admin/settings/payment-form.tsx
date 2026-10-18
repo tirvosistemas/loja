@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Banknote, CreditCard, QrCode } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -29,7 +30,20 @@ export function PaymentForm({ initial, stripeKeysReady }: { initial: PaymentForm
   const example = 129990;
 
   return (
-    <form onSubmit={f.submit} noValidate className="space-y-5">
+    <form
+      onSubmit={(ev) => {
+        // Sem nenhuma forma ativa o checkout trava: não deixa salvar assim.
+        if (!anyMethod) {
+          ev.preventDefault();
+          toast.error("Ative pelo menos uma forma de pagamento antes de salvar.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+        f.submit(ev);
+      }}
+      noValidate
+      className="space-y-5"
+    >
       {!anyMethod && (
         <Callout tone="danger" title="Nenhuma forma de pagamento ativa">
           Ative pelo menos uma forma abaixo, senão o cliente não consegue finalizar a compra.

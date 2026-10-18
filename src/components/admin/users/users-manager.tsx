@@ -121,12 +121,18 @@ export function UsersManager({ users, currentUserId, currentRole }: { users: Use
   const submit = () =>
     start(async () => {
       if (!dialog) return;
-      const r =
-        dialog.kind === "create"
-          ? await createUserAction({ name: form.name, email: form.email, password: form.password, role: form.role })
-          : dialog.kind === "edit"
-            ? await updateUserAction({ id: dialog.user.id, name: form.name, role: form.role, active: form.active })
-            : await resetPasswordAction({ id: dialog.user.id, password: form.password });
+      let r: Awaited<ReturnType<typeof createUserAction>>;
+      try {
+        r =
+          dialog.kind === "create"
+            ? await createUserAction({ name: form.name, email: form.email, password: form.password, role: form.role })
+            : dialog.kind === "edit"
+              ? await updateUserAction({ id: dialog.user.id, name: form.name, role: form.role, active: form.active })
+              : await resetPasswordAction({ id: dialog.user.id, password: form.password });
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+        return;
+      }
       if (!r.ok) {
         setErrors(r.fieldErrors ?? {});
         toast.error(r.error);

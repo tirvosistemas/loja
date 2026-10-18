@@ -71,6 +71,41 @@ describe("productSchema (fotos)", () => {
   });
 });
 
+describe("productSchema (URL do produto)", () => {
+  const base = {
+    slug: "",
+    status: "DRAFT",
+    featured: false,
+    isNew: false,
+    freeShipping: false,
+    tags: [],
+    images: [],
+    priceCents: 1000,
+    trackStock: false,
+    stock: 0,
+    allowBackorder: false,
+    lowStockAlert: 0,
+    variants: [],
+    specs: [],
+  };
+  const paths = (input: Record<string, unknown>) => {
+    const r = productSchema.safeParse({ ...base, ...input });
+    return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
+  };
+
+  it("sem nome, o erro fica só no nome (a URL não reclama em dobro)", () => {
+    const p = paths({ name: "" });
+    expect(p).toContain("name");
+    expect(p).not.toContain("slug");
+  });
+
+  it("acusa a URL quando o texto não vira endereço", () => {
+    expect(paths({ name: "!!!" })).toContain("slug");
+    expect(paths({ name: "Geladeira", slug: "@@@" })).toContain("slug");
+    expect(paths({ name: "Geladeira Frost Free" })).toEqual([]);
+  });
+});
+
 describe("feeBreakdown (simulador de frete do painel)", () => {
   it("dá o mesmo valor que o cálculo real do checkout", () => {
     let seed = 7;

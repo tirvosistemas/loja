@@ -40,19 +40,35 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#09090b",
-};
-
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+/** Tema da visita: o escolhido no botão (cookie) ou o padrão da loja. */
+async function resolveTheme() {
   const [jar, s] = await Promise.all([cookies(), getSettings()]);
   const cookieTheme = jar.get("theme")?.value;
-  const theme = cookieTheme === "light" || cookieTheme === "dark" ? cookieTheme : s.appearance.defaultTheme;
+  return cookieTheme === "light" || cookieTheme === "dark" ? cookieTheme : s.appearance.defaultTheme;
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await resolveTheme();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    // Cor da barra do navegador acompanha o tema (o botão de tema troca na hora).
+    themeColor: theme === "light" ? "#fafafa" : "#09090b",
+  };
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await resolveTheme();
   return (
-    <html lang="pt-BR" data-theme={theme} className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      data-theme={theme}
+      // A rolagem suave do CSS fica desligada nas trocas de página (o Next cuida do scroll).
+      data-scroll-behavior="smooth"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh">
         {children}
         <Toaster

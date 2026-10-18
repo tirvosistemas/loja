@@ -13,7 +13,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     start_url: "/?origem=app",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
+    // Sem travar a orientação: no tablet a loja também funciona deitada.
+    orientation: "any",
     background_color: "#09090b",
     theme_color: "#09090b",
     lang: "pt-BR",

@@ -38,11 +38,12 @@ export function AppSection({ vapidPublicKey, storeName }: { vapidPublicKey: stri
                 </li>
               ))}
             </ul>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <InstallAppButton variant="inverse" size="lg" />
-              <PushToggleButton vapidPublicKey={vapidPublicKey} className="h-13 px-6 text-base" />
+            {/* No celular os dois botões ocupam a largura toda (mesmo tamanho, um embaixo do outro). */}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <InstallAppButton variant="inverse" size="lg" className="max-sm:w-full" />
+              <PushToggleButton vapidPublicKey={vapidPublicKey} className="h-13 px-6 text-base max-sm:w-full" />
             </div>
-            <Link href="/app" className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary">
+            <Link href="/app" className="mt-3 inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary">
               Como instalar no Android e no iPhone <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
