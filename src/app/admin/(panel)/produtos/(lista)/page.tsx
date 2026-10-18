@@ -65,11 +65,12 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </ul>
           </nav>
 
-          <div className="mb-5 flex flex-col gap-2.5 xl:flex-row xl:items-center">
-            <Suspense fallback={<Skeleton className="h-11 w-full xl:w-80" />}>
-              <SearchBox placeholder="Buscar por nome, SKU ou modelo" className="w-full xl:w-80" />
+          {/* Busca e filtros lado a lado só em telas bem largas; antes disso os filtros quebravam linha e a busca encolhia. */}
+          <div className="mb-5 flex flex-col gap-2.5 2xl:flex-row 2xl:items-center">
+            <Suspense fallback={<Skeleton className="h-11 w-full 2xl:w-80" />}>
+              <SearchBox placeholder="Buscar por nome, SKU ou modelo" className="w-full 2xl:w-80 2xl:shrink-0" />
             </Suspense>
-            <Suspense fallback={<Skeleton className="h-11 w-full xl:w-[720px]" />}>
+            <Suspense fallback={<Skeleton className="h-11 w-full 2xl:w-[720px]" />}>
               <ProductFiltersBar categories={categories.map((c) => ({ id: c.id, label: c.label }))} brands={brands.map((b) => ({ id: b.id, name: b.name }))} />
             </Suspense>
           </div>

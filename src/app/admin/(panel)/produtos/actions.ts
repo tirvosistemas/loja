@@ -128,7 +128,7 @@ export async function createProduct(input: ProductInput): Promise<ActionResult<{
         ...productFields(v),
         specs: v.specs.length ? (v.specs as Prisma.InputJsonValue) : Prisma.DbNull,
         slug,
-        images: { create: v.images.map((im, i) => ({ url: im.url, alt: im.alt, sortOrder: i })) },
+        images: { create: v.images.map((im, i) => ({ url: im.url, alt: im.alt, width: im.width ?? null, height: im.height ?? null, sortOrder: i })) },
         variants: {
           create: v.variants.map((x, i) => ({
             name: x.name,
@@ -177,8 +177,8 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ac
               productId: id,
               url: im.url,
               alt: im.alt,
-              width: dims.get(im.url)?.width ?? null,
-              height: dims.get(im.url)?.height ?? null,
+              width: dims.get(im.url)?.width ?? im.width ?? null,
+              height: dims.get(im.url)?.height ?? im.height ?? null,
               sortOrder: i,
             })),
           });

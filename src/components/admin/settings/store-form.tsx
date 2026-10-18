@@ -4,6 +4,8 @@ import { ExternalLink, MessageCircle } from "lucide-react";
 import { Input, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { saveStoreSettings } from "@/app/admin/(panel)/configuracoes/actions";
+import { whatsappLink } from "@/lib/whatsapp";
+import { socialUrl } from "@/components/store/layout/social-icons";
 import { Callout, SaveBar, Section, SettingsField, maskCnpj, maskPhone, useSettingsForm } from "./form-kit";
 
 export type StoreFormValues = {
@@ -25,8 +27,15 @@ export type StoreFormValues = {
   announcementHref: string;
 };
 
+const SOCIAL = ["instagram", "facebook", "tiktok", "youtube"] as const;
+
+/** "@tirvo" ou "tirvo" vira o link completo do perfil (a loja aceita os dois, mas o salvamento pede o link). */
+function socialLinks(v: Pick<StoreFormValues, (typeof SOCIAL)[number]>) {
+  return Object.fromEntries(SOCIAL.map((k) => [k, socialUrl(k, v[k]) ?? ""])) as Pick<StoreFormValues, (typeof SOCIAL)[number]>;
+}
+
 export function StoreForm({ initial }: { initial: StoreFormValues }) {
-  const f = useSettingsForm({ ...initial, whatsapp: maskPhone(initial.whatsapp), phone: initial.phone ? maskPhone(initial.phone) : "" }, saveStoreSettings, {
+  const f = useSettingsForm({ ...initial, ...socialLinks(initial), cnpj: maskCnpj(initial.cnpj), whatsapp: maskPhone(initial.whatsapp), phone: initial.phone ? maskPhone(initial.phone) : "" }, saveStoreSettings, {
     onSaved: (data, values) => (data ? { ...values, ...data, whatsapp: maskPhone(data.whatsapp), phone: data.phone ? maskPhone(data.phone) : "" } : values),
   });
   const { values: v, set, errors: e } = f;
@@ -77,7 +86,7 @@ export function StoreForm({ initial }: { initial: StoreFormValues }) {
               />
             </div>
             <a
-              href={waValid ? `https://wa.me/55${waDigits}?text=${encodeURIComponent("Teste do WhatsApp de pedidos da loja.")}` : undefined}
+              href={waValid ? whatsappLink(waDigits, "Teste do WhatsApp de pedidos da loja. ✅") : undefined}
               target="_blank"
               rel="noopener noreferrer"
               aria-disabled={!waValid}
@@ -122,7 +131,19 @@ export function StoreForm({ initial }: { initial: StoreFormValues }) {
             ] as const
           ).map(([key, label, ph]) => (
             <SettingsField key={key} name={key} label={label} htmlFor={`st-${key}`} error={e[key]}>
-              <Input id={`st-${key}`} type="url" inputMode="url" placeholder={ph} value={v[key]} onChange={(x) => set(key, x.target.value)} aria-invalid={!!e[key]} />
+              <Input
+                id={`st-${key}`}
+                type="url"
+                inputMode="url"
+                placeholder={ph}
+                value={v[key]}
+                onChange={(x) => set(key, x.target.value)}
+                onBlur={() => {
+                  const link = socialUrl(key, v[key]) ?? "";
+                  if (link !== v[key]) set(key, link);
+                }}
+                aria-invalid={!!e[key]}
+              />
             </SettingsField>
           ))}
         </div>

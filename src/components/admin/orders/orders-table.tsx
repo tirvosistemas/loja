@@ -64,7 +64,7 @@ export function OrdersTable({ orders, compact }: { orders: OrderRow[]; compact?:
                   {!compact && o.city ? ` · ${o.city}` : ""}
                 </p>
               </td>
-              <td className="tabular text-right font-medium">{formatBRL(o.totalCents)}</td>
+              <td className="tabular whitespace-nowrap text-right font-medium">{formatBRL(o.totalCents)}</td>
               <td>
                 <p className="text-[13px] text-muted-foreground">{PAYMENT_METHOD_SHORT[o.paymentMethod]}</p>
                 <div className="mt-1">

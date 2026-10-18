@@ -55,22 +55,25 @@ export function OrderFiltersBar() {
             </option>
           ))}
         </Select>
-        <Select
-          aria-label="Período"
-          value={period}
-          onChange={(e) => {
-            const v = e.target.value;
-            set({ periodo: v || null, ...(v !== "personalizado" ? { de: null, ate: null } : {}) });
-          }}
-          className="col-span-2 sm:col-span-1 sm:w-48"
-        >
-          <option value="">Qualquer data</option>
-          {PERIODS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </Select>
+        {/* O Select fica dentro de um <div>: a largura na grade vai no invólucro. */}
+        <div className="col-span-2 sm:col-span-1">
+          <Select
+            aria-label="Período"
+            value={period}
+            onChange={(e) => {
+              const v = e.target.value;
+              set({ periodo: v || null, ...(v !== "personalizado" ? { de: null, ate: null } : {}) });
+            }}
+            className="sm:w-48"
+          >
+            <option value="">Qualquer data</option>
+            {PERIODS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {period === "personalizado" && (

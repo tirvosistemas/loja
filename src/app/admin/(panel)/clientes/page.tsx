@@ -105,7 +105,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                     {c.validOrders}
                     {c.orders > c.validOrders && <span className="ml-1 text-xs text-subtle">(+{c.orders - c.validOrders} cancel.)</span>}
                   </td>
-                  <td className="tabular text-right font-medium">{formatBRL(c.spentCents)}</td>
+                  <td className="tabular whitespace-nowrap text-right font-medium">{formatBRL(c.spentCents)}</td>
                   <td className="tabular whitespace-nowrap text-[13px] text-muted-foreground">{formatDate(c.lastOrderAt)}</td>
                 </tr>
               ))}

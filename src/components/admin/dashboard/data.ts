@@ -88,12 +88,15 @@ export async function getDashboardData(now = new Date()) {
     }
     return { cents, count };
   };
+  // O período anterior para no mesmo ponto do atual (ontem até esta hora, não o dia inteiro),
+  // senão a comparação de hoje começa o dia sempre em queda.
+  const ago = (days: number) => addDays(now, -days);
   const todayRev = sum(today);
-  const yesterdayRev = sum(yesterday, today);
+  const yesterdayRev = sum(yesterday, ago(1));
   const rev7 = sum(d7);
-  const revPrev7 = sum(prev7, d7);
+  const revPrev7 = sum(prev7, ago(7));
   const rev30 = sum(d30);
-  const revPrev30 = sum(prev30, d30);
+  const revPrev30 = sum(prev30, ago(30));
   const avg30 = rev30.count ? Math.round(rev30.cents / rev30.count) : 0;
   const avgPrev30 = revPrev30.count ? Math.round(revPrev30.cents / revPrev30.count) : 0;
 

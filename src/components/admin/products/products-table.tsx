@@ -228,7 +228,6 @@ export function ProductsTable({ products }: { products: AdminProductRow[] }) {
       return next;
     });
   const allOn = products.length > 0 && selected.size === products.length;
-  const someOn = selected.size > 0 && !allOn;
   const clear = () => {
     setSelected(new Set());
     router.refresh();
@@ -245,7 +244,7 @@ export function ProductsTable({ products }: { products: AdminProductRow[] }) {
               <Checkbox
                 checked={allOn}
                 onChange={(on) => setSelected(on ? new Set(ids) : new Set())}
-                label={<span className="sr-only">{allOn || someOn ? "Desmarcar todos" : "Selecionar todos desta página"}</span>}
+                label={<span className="sr-only">{allOn ? "Desmarcar todos" : "Selecionar todos desta página"}</span>}
               />
             </th>
             <th scope="col">Produto</th>

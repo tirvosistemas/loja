@@ -22,6 +22,12 @@ const PRINT_CSS = `
   #print-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }`;
 
+/** CNPJ só com números (como vem da semente ou de importações) sai formatado no papel. */
+function formatCnpj(v: string) {
+  const d = v.replace(/\D/g, "");
+  return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : v;
+}
+
 export function PrintSlip({ order, settings, auto }: { order: PrintOrderData; settings: Settings; auto: boolean }) {
   const store = settings.store;
   const sa = settings.address;
@@ -42,7 +48,7 @@ export function PrintSlip({ order, settings, auto }: { order: PrintOrderData; se
           <div className="min-w-0">
             <Logo className="h-7 text-zinc-900" title={store.name || "Tirvo"} />
             <div className="mt-2 text-xs leading-relaxed text-zinc-600">
-              {store.legalName && <p>{store.legalName}{store.cnpj ? ` · CNPJ ${store.cnpj}` : ""}</p>}
+              {store.legalName && <p>{store.legalName}{store.cnpj ? ` · CNPJ ${formatCnpj(store.cnpj)}` : ""}</p>}
               {storeAddress && <p>{storeAddress}</p>}
               {(store.whatsapp || store.phone) && <p>WhatsApp {formatPhone(store.whatsapp || store.phone)}</p>}
             </div>
@@ -144,8 +150,8 @@ export function PrintSlip({ order, settings, auto }: { order: PrintOrderData; se
                     <p className="font-medium">{it.name}</p>
                     {(it.variantName || it.sku) && <p className="text-xs text-zinc-600">{[it.variantName, it.sku ? `SKU ${it.sku}` : null].filter(Boolean).join(" · ")}</p>}
                   </td>
-                  <td className="hidden py-2.5 pr-2 text-right tabular-nums sm:table-cell">{formatBRL(it.unitPriceCents)}</td>
-                  <td className="py-2.5 text-right tabular-nums">{formatBRL(it.totalCents)}</td>
+                  <td className="hidden whitespace-nowrap py-2.5 pr-2 text-right tabular-nums sm:table-cell">{formatBRL(it.unitPriceCents)}</td>
+                  <td className="whitespace-nowrap py-2.5 text-right tabular-nums">{formatBRL(it.totalCents)}</td>
                 </tr>
               ))}
             </tbody>

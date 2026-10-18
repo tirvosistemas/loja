@@ -85,7 +85,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       )}
 
       <section aria-label="Resumo" className="mb-6 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Faturamento hoje" value={formatBRL(stats.today.cents)} icon={<CircleDollarSign />} trend={stats.today.trend} hint={stats.today.trend ? "vs. ontem" : pluralize(stats.today.count, "pedido", "pedidos")} />
+        <StatCard label="Faturamento hoje" value={formatBRL(stats.today.cents)} icon={<CircleDollarSign />} trend={stats.today.trend} hint={stats.today.trend ? "vs. ontem até esta hora" : pluralize(stats.today.count, "pedido", "pedidos")} />
         <StatCard label="Últimos 7 dias" value={formatBRL(stats.week.cents)} icon={<TrendingUp />} trend={stats.week.trend} hint={stats.week.trend ? "vs. 7 dias antes" : pluralize(stats.week.count, "pedido", "pedidos")} />
         <StatCard label="Últimos 30 dias" value={formatBRL(stats.month.cents)} icon={<TrendingUp />} trend={stats.month.trend} hint={stats.month.trend ? "vs. 30 dias antes" : pluralize(stats.month.count, "pedido", "pedidos")} />
         <Link href="/admin/pedidos?status=NEW" className="rounded-2xl transition-shadow hover:ring-1 hover:ring-border-strong focus-visible:ring-2 focus-visible:ring-primary">

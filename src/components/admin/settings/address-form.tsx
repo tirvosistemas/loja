@@ -50,6 +50,7 @@ export function AddressForm({ initial }: { initial: AddressFormValues }) {
     try {
       const res = await fetch(`/api/cep/${digits}`);
       if (!res.ok) {
+        if (res.status !== 404) lastCep.current = ""; // falha passageira: deixa tentar o mesmo CEP de novo
         setCepError(res.status === 404 ? "CEP não encontrado. Preencha o endereço manualmente." : "Não foi possível consultar o CEP agora.");
         return;
       }
@@ -65,6 +66,7 @@ export function AddressForm({ initial }: { initial: AddressFormValues }) {
       });
       requestAnimationFrame(() => numberRef.current?.focus());
     } catch {
+      lastCep.current = "";
       setCepError("Não foi possível consultar o CEP agora.");
     } finally {
       setCepLoading(false);
@@ -104,6 +106,7 @@ export function AddressForm({ initial }: { initial: AddressFormValues }) {
               onChange={(x) => {
                 const m = maskCep(x.target.value);
                 set("cep", m);
+                if (m.replace(/\D/g, "").length < 8) setCepError(null);
                 void fillFromCep(m);
               }}
               aria-invalid={!!(e.cep || cepError)}

@@ -6,6 +6,7 @@ import { AlertTriangle, Info, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field as FieldBase } from "@/components/ui/input";
+import { useUnsavedGuard } from "@/components/admin/catalog/use-action";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/lib/action";
 
@@ -38,18 +39,19 @@ export function useSettingsForm<T extends Record<string, unknown>, R = unknown>(
     setSaved((v) => ({ ...v, ...p }));
   }, []);
 
-  // Avisa antes de sair da página com alterações não salvas.
-  useEffect(() => {
-    if (!dirty) return;
-    const h = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", h);
-    return () => window.removeEventListener("beforeunload", h);
-  }, [dirty]);
+  // Avisa antes de sair com alterações não salvas: fechar a aba, trocar de aba das configurações ou usar o menu.
+  useUnsavedGuard(dirty && !pending);
 
   const submit = (e?: { preventDefault(): void }) => {
     e?.preventDefault();
     start(async () => {
-      const r = await save(values);
+      let r: ActionResult<R>;
+      try {
+        r = await save(values);
+      } catch {
+        toast.error("Falha de conexão. Confira a internet e tente de novo.");
+        return;
+      }
       if (!r.ok) {
         setErrors(r.fieldErrors ?? {});
         toast.error(r.error);

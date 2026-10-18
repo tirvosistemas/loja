@@ -110,10 +110,10 @@ export async function deleteBrand(id: string): Promise<ActionResult> {
   try {
     const brand = await db.brand.findUnique({ where: { id }, select: { logo: true } });
     if (!brand) return fail("Marca não encontrada. Ela pode já ter sido excluída.");
-    await db.$transaction([db.product.updateMany({ where: { brandId: id }, data: { brandId: null } }), db.brand.delete({ where: { id } })]);
+    const [moved] = await db.$transaction([db.product.updateMany({ where: { brandId: id }, data: { brandId: null } }), db.brand.delete({ where: { id } })]);
     await deleteUnusedUploads([brand.logo]);
     refresh();
-    return { ok: true, message: "Marca excluída. Os produtos continuam cadastrados, sem marca." };
+    return { ok: true, message: moved.count > 0 ? "Marca excluída. Os produtos continuam cadastrados, sem marca." : "Marca excluída." };
   } catch (e) {
     return handleError(e, "excluir");
   }

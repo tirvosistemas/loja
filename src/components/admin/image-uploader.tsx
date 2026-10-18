@@ -1,22 +1,26 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GripVertical, ImagePlus, Loader2, Star, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { imageUrl } from "@/lib/images";
 import { cn } from "@/lib/utils";
 
 export type UploadFolder = "products" | "banners" | "categories" | "brands" | "pages" | "push" | "misc";
-export type GalleryImage = { url: string; alt?: string | null };
+export type GalleryImage = { url: string; alt?: string | null; width?: number | null; height?: number | null };
+type Uploaded = { key: string; width: number | null; height: number | null };
 
-async function uploadFile(file: File, folder: UploadFolder): Promise<string> {
+const dimension = (n: unknown) => (typeof n === "number" && Number.isInteger(n) && n > 0 ? n : null);
+
+async function uploadFile(file: File, folder: UploadFolder): Promise<Uploaded> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("folder", folder);
   const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-  const j = (await res.json().catch(() => ({}))) as { key?: string; error?: string };
+  const j = (await res.json().catch(() => ({}))) as { key?: string; width?: unknown; height?: unknown; error?: string };
   if (!res.ok || !j.key) throw new Error(j.error || "Falha no envio da imagem.");
-  return j.key;
+  // Largura e altura da versão grande (o que a vitrine exibe), para gravar junto da foto.
+  return { key: j.key, width: dimension(j.width), height: dimension(j.height) };
 }
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/avif,image/gif,image/heic,image/heif";
@@ -47,7 +51,7 @@ export function ImageUpload({
     if (!f) return;
     setBusy(true);
     try {
-      onChange(await uploadFile(f, folder));
+      onChange((await uploadFile(f, folder)).key);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -77,7 +81,7 @@ export function ImageUpload({
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl(value, "md")} alt="" className="size-full object-cover" />
-            <div className="absolute inset-x-0 bottom-0 flex justify-end gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+            <div className="absolute inset-x-0 bottom-0 flex justify-end gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-100 transition sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
               <button type="button" onClick={() => input.current?.click()} className="rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-900">
                 Trocar
               </button>
@@ -99,7 +103,16 @@ export function ImageUpload({
           </div>
         )}
       </div>
-      <input ref={input} type="file" accept={ACCEPT} hidden onChange={(e) => handle(e.target.files)} />
+      <input
+        ref={input}
+        type="file"
+        accept={ACCEPT}
+        hidden
+        onChange={(e) => {
+          handle(e.target.files);
+          e.target.value = ""; // permite escolher o mesmo arquivo de novo depois de remover
+        }}
+      />
     </div>
   );
 }
@@ -120,25 +133,36 @@ export function ImageGallery({
   const [uploading, setUploading] = useState(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropActive, setDropActive] = useState(false);
+  // Envio leva alguns segundos: ao terminar, soma as fotos à lista atual (não à do momento do clique),
+  // para não perder legendas editadas, fotos removidas ou outro lote enviado no meio do caminho.
+  const latest = useRef(value);
+  const pending = useRef(0);
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
 
   const handleFiles = async (files: FileList | File[] | null) => {
     const list = Array.from(files ?? []).filter((f) => f.type.startsWith("image/"));
     if (!list.length) return;
-    const room = Math.max(0, max - value.length);
+    const room = Math.max(0, max - latest.current.length - pending.current);
     const toSend = list.slice(0, room);
     if (list.length > room) toast.warning(`Máximo de ${max} fotos por produto.`);
+    if (!toSend.length) return;
+    pending.current += toSend.length;
     setUploading((n) => n + toSend.length);
-    const added: GalleryImage[] = [];
     for (const f of toSend) {
       try {
-        added.push({ url: await uploadFile(f, folder), alt: "" });
+        const up = await uploadFile(f, folder);
+        const next = [...latest.current, { url: up.key, alt: "", width: up.width, height: up.height }];
+        latest.current = next;
+        onChange(next);
       } catch (e) {
         toast.error(`${f.name}: ${(e as Error).message}`);
       } finally {
+        pending.current -= 1;
         setUploading((n) => n - 1);
       }
     }
-    if (added.length) onChange([...value, ...added]);
   };
 
   const move = (from: number, to: number) => {

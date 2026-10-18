@@ -11,7 +11,6 @@ import { ORDER_FLOW_DELIVERY, ORDER_FLOW_PICKUP, ORDER_STATUS_LABEL } from "@/li
 import { cancelOrderAction, changeOrderStatusAction, markOrderPaidAction } from "@/app/admin/(panel)/pedidos/actions";
 
 const RANK: Record<string, number> = { NEW: 0, CONFIRMED: 1, PREPARING: 2, OUT_FOR_DELIVERY: 3, READY_FOR_PICKUP: 3, DELIVERED: 4 };
-const ALL = ["NEW", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "READY_FOR_PICKUP", "DELIVERED"] as const;
 
 function stepLabel(status: string, pickup: boolean) {
   switch (status) {
@@ -62,8 +61,15 @@ export function OrderActions({
   const change = (target: string) => {
     setBusy(target);
     start(async () => {
-      const r = await changeOrderStatusAction(orderId, target, note || undefined);
-      setBusy(null);
+      let r: Awaited<ReturnType<typeof changeOrderStatusAction>>;
+      try {
+        r = await changeOrderStatusAction(orderId, target, note || undefined);
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+        return;
+      } finally {
+        setBusy(null);
+      }
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -79,11 +85,16 @@ export function OrderActions({
   const markPaid = () => {
     setBusy("paid");
     start(async () => {
-      const r = await markOrderPaidAction(orderId);
-      setBusy(null);
-      if (r.ok) toast.success(r.message ?? "Pagamento confirmado.");
-      else toast.error(r.error);
-      router.refresh();
+      try {
+        const r = await markOrderPaidAction(orderId);
+        if (r.ok) toast.success(r.message ?? "Pagamento confirmado.");
+        else toast.error(r.error);
+        router.refresh();
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+      } finally {
+        setBusy(null);
+      }
     });
   };
 
@@ -152,7 +163,8 @@ export function OrderActions({
             </label>
             <Select id="status-other" value={other} onChange={(e) => setOther(e.target.value)}>
               <option value="">Outro status…</option>
-              {ALL.filter((s) => s !== status).map((s) => (
+              {/* Só os status do tipo de entrega do pedido (retirada não “sai para entrega”). */}
+              {flow.filter((s) => s !== status).map((s) => (
                 <option key={s} value={s}>
                   {ORDER_STATUS_LABEL[s].label}
                 </option>

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BadgePercent, BellRing, ExternalLink, FileText, FolderTree, GalleryHorizontal, LayoutDashboard, LogOut, Mail, Menu,
   Package, Settings, ShieldCheck, ShoppingBag, Star, Tags, Ticket, Users, X, type LucideIcon,
 } from "lucide-react";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
+import { Sheet } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV } from "./nav";
@@ -62,15 +63,30 @@ export function AdminShell({ user, counts, storeName, children }: { user: { name
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
+  const closeMenu = useCallback(() => setOpen(false), []);
+  // Girou o tablet ou alargou a janela: a barra lateral fixa aparece e a gaveta fecha.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => mq.matches && setOpen(false);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
   const initials = user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
-  const sidebar = (
+  // No celular o menu abre numa gaveta (Esc fecha, rolagem da página travada); o "fechar" ocupa o lugar do selo.
+  const sidebar = (drawer: boolean) => (
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center justify-between px-5">
         <Link href="/admin" aria-label={`${storeName} · painel`} className="text-foreground">
           <AnimatedLogo className="h-6" />
         </Link>
-        <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-subtle">admin</span>
+        {drawer ? (
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar menu" className="-mr-2 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-elevated hover:text-foreground">
+            <X className="size-5" />
+          </button>
+        ) : (
+          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-subtle">admin</span>
+        )}
       </div>
       <div className="no-scrollbar flex-1 overflow-y-auto px-3 pb-6 pt-2">
         <NavLinks counts={counts} onNavigate={() => setOpen(false)} />
@@ -94,23 +110,15 @@ export function AdminShell({ user, counts, storeName, children }: { user: { name
 
   return (
     <div className="min-h-dvh bg-background">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border bg-card lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border bg-card lg:block">{sidebar(false)}</aside>
 
-      {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[85vw] max-w-72 border-r border-border bg-card shadow-2xl">
-            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar menu" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-elevated">
-              <X className="size-5" />
-            </button>
-            {sidebar}
-          </aside>
-        </div>
-      )}
+      <Sheet open={open} onClose={closeMenu} side="left" className="w-[85vw] max-w-72 bg-card lg:hidden">
+        {sidebar(true)}
+      </Sheet>
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-xl sm:px-6">
-          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menu" className="-ml-1 grid size-10 place-items-center rounded-xl text-muted-foreground hover:bg-elevated lg:hidden">
+          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menu" aria-expanded={open} className="-ml-1 grid size-10 place-items-center rounded-xl text-muted-foreground hover:bg-elevated lg:hidden">
             <Menu className="size-5" />
           </button>
           <Link href="/admin" className="text-foreground lg:hidden" aria-label="Painel">

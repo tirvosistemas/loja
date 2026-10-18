@@ -26,7 +26,7 @@ export default async function EditProductPage({ params }: Params) {
     db.product.findUnique({
       where: { id },
       include: {
-        images: { orderBy: { sortOrder: "asc" }, select: { url: true, alt: true } },
+        images: { orderBy: { sortOrder: "asc" }, select: { url: true, alt: true, width: true, height: true } },
         variants: { orderBy: { sortOrder: "asc" } },
       },
     }),

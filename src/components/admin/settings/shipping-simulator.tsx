@@ -33,13 +33,20 @@ export function ShippingSimulator({ draft }: { draft: ShippingInput }) {
   const run = () =>
     start(async () => {
       setError(null);
-      const r = await simulateShippingAction({
-        shipping: draft,
-        cep,
-        number,
-        subtotalCents: subtotal ?? 0,
-        itemCount: Math.max(1, Math.min(99, items ?? 1)),
-      });
+      let r: Awaited<ReturnType<typeof simulateShippingAction>>;
+      try {
+        r = await simulateShippingAction({
+          shipping: draft,
+          cep,
+          number,
+          subtotalCents: subtotal ?? 0,
+          itemCount: Math.max(1, Math.min(99, items ?? 1)),
+        });
+      } catch {
+        setResult(null);
+        setError("Falha de conexão. Tente de novo.");
+        return;
+      }
       if (!r.ok) {
         setResult(null);
         setError(r.error);

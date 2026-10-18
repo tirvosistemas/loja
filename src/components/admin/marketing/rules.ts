@@ -7,7 +7,8 @@ export const hrefSchema = z
   .string()
   .trim()
   .max(500, "Link muito longo.")
-  .refine((v) => v === "" || (/^\/(?!\/)/.test(v) && !/\s/.test(v)) || /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(v), {
+  // "/\evil.com" vira "//evil.com" no navegador: barra invertida nunca é aceita.
+  .refine((v) => v === "" || (!/\\/.test(v) && ((/^\/(?![/\\])/.test(v) && !/\s/.test(v)) || /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(v))), {
     message: "Use um caminho da loja (ex.: /ofertas) ou um endereço completo (https://…).",
   })
   .transform((v) => (v === "" ? null : v));
@@ -17,7 +18,7 @@ export const imageKeySchema = z
   .string()
   .trim()
   .max(500)
-  .refine((v) => /^\/(?!\/)/.test(v) || /^https:\/\//i.test(v), { message: "Imagem inválida. Envie a imagem de novo." });
+  .refine((v) => !/\\/.test(v) && (/^\/(?![/\\])/.test(v) || /^https:\/\//i.test(v)), { message: "Imagem inválida. Envie a imagem de novo." });
 
 /** Data em ISO (ou vazio → null). */
 export const optionalDate = z

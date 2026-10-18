@@ -13,6 +13,7 @@ import { geocodeWith, routeMetersWith, type MapsProvider } from "@/lib/shipping/
 import { isValidCpf } from "@/lib/orders/cpf";
 import { onlyDigits } from "@/lib/utils";
 import { feeBreakdown, type FeeBreakdown } from "@/components/admin/settings/fee-breakdown";
+import { socialUrl } from "@/components/store/layout/social-icons";
 
 // Ações das Configurações. Só dono e administradores mexem aqui.
 
@@ -33,12 +34,6 @@ function saveError(e: unknown): ActionResult<never> {
 
 const text = (max: number, msg?: string) => z.string().trim().max(max, msg ?? `Use até ${max} caracteres.`);
 
-function normalizeUrl(v: string) {
-  const s = v.trim();
-  if (!s) return "";
-  return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, "")}`;
-}
-
 function isHttpUrl(v: string) {
   try {
     const u = new URL(v);
@@ -48,9 +43,11 @@ function isHttpUrl(v: string) {
   }
 }
 
-const urlField = text(300)
-  .transform(normalizeUrl)
-  .refine((v) => v === "" || isHttpUrl(v), "Informe um link válido (https://…).");
+// Redes sociais: aceita "@perfil", "perfil" ou o link completo e guarda sempre o link.
+const socialField = (network: "instagram" | "facebook" | "tiktok" | "youtube") =>
+  text(300)
+    .transform((v) => socialUrl(network, v) ?? "")
+    .refine((v) => v === "" || isHttpUrl(v), "Informe o perfil (@perfil) ou um link válido (https://…).");
 
 const emailOrEmpty = text(160)
   .transform((v) => v.toLowerCase())
@@ -84,10 +81,10 @@ const storeInput = z
       .refine((d) => d === "" || d.length === 14, "O CNPJ tem 14 números.")
       .transform((d) => (d ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : "")),
     businessHours: text(120),
-    instagram: urlField,
-    facebook: urlField,
-    tiktok: urlField,
-    youtube: urlField,
+    instagram: socialField("instagram"),
+    facebook: socialField("facebook"),
+    tiktok: socialField("tiktok"),
+    youtube: socialField("youtube"),
     announcementEnabled: z.boolean(),
     announcementText: text(160),
     // "//site.com" e "/\site.com" levariam para outro domínio: caminho interno é só "/algo".

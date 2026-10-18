@@ -10,11 +10,12 @@ export type SalesPoint = { date: string; label: string; weekday: string; revenue
 
 const ORANGE = "#FF5500";
 
+// Espaços não separáveis: o rótulo do eixo não quebra em duas linhas ("R$ 22,2" / "mil").
 function compactBRL(cents: number) {
   const v = cents / 100;
-  if (v >= 1_000_000) return `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
-  if (v >= 1_000) return `R$ ${(v / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
-  return `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+  if (v >= 1_000_000) return `R$\u00a0${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}\u00a0mi`;
+  if (v >= 1_000) return `R$\u00a0${(v / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}\u00a0mil`;
+  return `R$\u00a0${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
 }
 
 type TooltipProps = { active?: boolean; payload?: ReadonlyArray<{ payload?: SalesPoint }> };
@@ -90,7 +91,8 @@ export function SalesChart({ data }: { data: SalesPoint[] }) {
                 tick={{ fill: "var(--subtle)", fontSize: 11 }}
                 tickFormatter={(v: number) => compactBRL(v)}
                 allowDecimals={false}
-                domain={[0, (max: number) => (max > 0 ? max : 10000)]}
+                // "auto" arredonda o topo do eixo (0, 6 mil, 12 mil, 18 mil, 24 mil) em vez de terminar no maior dia.
+                domain={empty ? [0, 10000] : [0, "auto"]}
               />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border-strong)", strokeWidth: 1 }} isAnimationActive={false} />
               <Area
@@ -136,7 +138,7 @@ export function SalesChart({ data }: { data: SalesPoint[] }) {
                     {d.label} <span className="text-subtle">· {d.weekday}</span>
                   </td>
                   <td className="px-3 py-2 text-right">{d.orders}</td>
-                  <td className="px-3 py-2 text-right font-medium">{formatBRL(d.revenueCents)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formatBRL(d.revenueCents)}</td>
                 </tr>
               ))}
             </tbody>

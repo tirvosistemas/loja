@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, CopyPlus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export function BannerActions({ id, title, active, first, last }: { id: string; 
   const router = useRouter();
   const [pending, start] = useTransition();
   const [on, setOn] = useState(active);
+  useEffect(() => setOn(active), [active]);
 
   const run = (fn: () => Promise<ActionResult<unknown>>, opts: { quiet?: boolean; onFail?: () => void } = {}) =>
     start(async () => {
