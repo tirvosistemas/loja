@@ -104,10 +104,10 @@ export function BannerForm({ id, initial, links }: { id: string | null; initial:
 
           <Section title="Textos" description="Curtos e diretos. Deixe em branco o que não quiser mostrar.">
             <SettingsField name="eyebrow" htmlFor="b-eyebrow" label={<LabelWithCount value={v.eyebrow} max={40}>Texto pequeno (acima do título)</LabelWithCount>} error={e.eyebrow}>
-              <Input id="b-eyebrow" value={v.eyebrow} maxLength={60} placeholder="Ex.: Semana da cozinha" onChange={(x) => set("eyebrow", x.target.value)} aria-invalid={!!e.eyebrow} />
+              <Input id="b-eyebrow" value={v.eyebrow} maxLength={60} placeholder="Ex.: Semana gamer" onChange={(x) => set("eyebrow", x.target.value)} aria-invalid={!!e.eyebrow} />
             </SettingsField>
             <SettingsField name="title" htmlFor="b-title" label={<LabelWithCount value={v.title} max={60} required>Título</LabelWithCount>} error={e.title}>
-              <Input id="b-title" value={v.title} maxLength={120} placeholder="Ex.: Geladeiras com até 25% OFF" onChange={(x) => set("title", x.target.value)} aria-invalid={!!e.title} />
+              <Input id="b-title" value={v.title} maxLength={120} placeholder="Ex.: Headsets com até 25% OFF" onChange={(x) => set("title", x.target.value)} aria-invalid={!!e.title} />
             </SettingsField>
             <SettingsField name="subtitle" htmlFor="b-subtitle" label={<LabelWithCount value={v.subtitle} max={140}>Subtítulo</LabelWithCount>} error={e.subtitle}>
               <Textarea

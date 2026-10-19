@@ -45,7 +45,7 @@ export default function NotFound() {
                   minLength={2}
                   maxLength={80}
                   enterKeyHint="search"
-                  placeholder="Geladeira, fogão, air fryer..."
+                  placeholder="Headset, controle, chapinha..."
                   className="h-12 w-full rounded-xl border border-input bg-card pl-11 pr-3 text-[15px] text-foreground placeholder:text-subtle hover:border-border-strong focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
                 />
               </div>

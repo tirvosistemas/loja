@@ -156,7 +156,7 @@ export function CategoryNav({ categories }: { categories: MenuCategory[] }) {
             className="absolute inset-x-0 top-full z-50 border-b border-border bg-background/95 shadow-2xl backdrop-blur-xl animate-fade-in"
           >
             <div className="container-page grid grid-cols-[260px_1fr] gap-6 py-6 xl:grid-cols-[280px_1fr_280px]">
-              <ul ref={listRef} onKeyDown={onListKey} className="max-h-[60dvh] space-y-0.5 overflow-y-auto border-r border-border pr-4">
+              <ul ref={listRef} onKeyDown={onListKey} className="max-h-[calc(100dvh-14rem)] space-y-0.5 overflow-y-auto border-r border-border pr-4">
                 {categories.map((c) => (
                   <li key={c.id}>
                     <Link
@@ -166,7 +166,7 @@ export function CategoryNav({ categories }: { categories: MenuCategory[] }) {
                       onFocus={() => setActiveId(c.id)}
                       aria-current={pathname === `/categoria/${c.slug}` ? "page" : undefined}
                       className={cn(
-                        "flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
+                        "flex min-h-9 items-center gap-3 rounded-xl px-3 py-1.5 text-sm transition-colors",
                         active?.id === c.id ? "bg-elevated text-foreground" : "text-muted-foreground hover:text-foreground",
                       )}
                     >

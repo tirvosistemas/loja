@@ -226,7 +226,7 @@ export function CategoriesManager({ categories }: { categories: CategoryRow[] })
         <EmptyState
           icon={<FolderTree />}
           title="Nenhuma categoria ainda"
-          description="Crie categorias como Geladeiras, Fogões e Lavadoras. Elas formam o menu da loja e ajudam o cliente a encontrar os produtos."
+          description="Crie categorias como Headsets, Controles e Suportes de celular. Elas formam o menu da loja e ajudam o cliente a encontrar os produtos."
           action={
             <Button size="sm" onClick={() => openCreate()}>
               <Plus aria-hidden /> Criar categoria
@@ -346,7 +346,7 @@ export function CategoriesManager({ categories }: { categories: CategoryRow[] })
                 id="cat-name"
                 value={form.name}
                 maxLength={80}
-                placeholder="ex.: Geladeiras"
+                placeholder="ex.: Headsets Gamer"
                 aria-invalid={!!errors.name}
                 onChange={(e) => {
                   const name = e.target.value;

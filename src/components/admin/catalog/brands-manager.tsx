@@ -162,7 +162,7 @@ export function BrandsManager({ brands }: { brands: BrandRow[] }) {
         <EmptyState
           icon={<Tags />}
           title="Nenhuma marca cadastrada"
-          description="Cadastre os fabricantes (Brastemp, Electrolux, Consul…) para o cliente filtrar por marca na loja."
+          description="Cadastre os fabricantes (JBL, Xiaomi, Redragon…) para o cliente filtrar por marca na loja."
           action={
             <Button size="sm" onClick={openCreate}>
               <Plus aria-hidden /> Cadastrar marca
@@ -263,7 +263,7 @@ export function BrandsManager({ brands }: { brands: BrandRow[] }) {
               id="brand-name"
               value={form.name}
               maxLength={80}
-              placeholder="ex.: Electrolux"
+              placeholder="ex.: JBL"
               aria-invalid={!!errors.name}
               onChange={(e) => {
                 const name = e.target.value;

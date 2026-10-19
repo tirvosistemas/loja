@@ -30,7 +30,7 @@ export function CategoryGrid({ categories }: { categories: HomeCategory[] }) {
               )}
               <span className="min-w-0">
                 <span className="line-clamp-2 text-sm font-medium leading-tight">{c.name}</span>
-                <span className="mt-1 block font-mono text-[11px] text-subtle">{pluralize(c.productCount, "produto", "produtos")}</span>
+                <span className="mt-1 block font-mono text-[11px] text-subtle">{c.productCount ? pluralize(c.productCount, "produto", "produtos") : "Em breve"}</span>
               </span>
             </Link>
           </li>

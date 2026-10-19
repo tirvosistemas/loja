@@ -19,7 +19,7 @@ const MAX_VARIANTS = 50;
 const PRESETS = [
   { label: "110V e 220V", group: "Voltagem", names: ["110V", "220V"] },
   { label: "Bivolt", group: "Voltagem", names: ["Bivolt"] },
-  { label: "Branco e Inox", group: "Cor", names: ["Branco", "Inox"] },
+  { label: "Preto e Branco", group: "Cor", names: ["Preto", "Branco"] },
 ];
 
 function newVariant(name = ""): VariantRow {
@@ -169,7 +169,7 @@ export function VariantsSection({ form, active }: { form: FormApi; active: boole
                         id={id("name")}
                         value={x.name}
                         maxLength={80}
-                        placeholder={v.variantLabel === "Cor" ? "ex.: Inox" : "ex.: 220V"}
+                        placeholder={v.variantLabel === "Cor" ? "ex.: Preto" : "ex.: 220V"}
                         aria-invalid={!!err("name")}
                         onChange={(ev) => update(i, { name: ev.target.value })}
                         className="font-medium"

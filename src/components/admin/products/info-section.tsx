@@ -46,7 +46,7 @@ export function InfoSection({
           value={v.name}
           maxLength={160}
           autoFocus={autoFocusName}
-          placeholder="ex.: Geladeira Frost Free Duplex 375 L Inox"
+          placeholder="ex.: Headset Gamer RGB 7.1 com Microfone"
           aria-invalid={!!e.name}
           onChange={(ev) => {
             const name = ev.target.value;
@@ -70,7 +70,7 @@ export function InfoSection({
           maxLength={500}
           value={v.shortDescription}
           aria-invalid={!!e.shortDescription}
-          placeholder="ex.: Duas portas, frost free, 375 litros e gaveta de legumes extra grande."
+          placeholder="ex.: Som surround 7.1, microfone removível e luzes RGB. Funciona no PC, PS5, Xbox e celular."
           onChange={(ev) => set("shortDescription", ev.target.value)}
         />
       </FormField>
@@ -83,7 +83,7 @@ export function InfoSection({
           rows={12}
           maxLength={20000}
           invalid={!!e.description}
-          placeholder={"## Destaques\n- Frost free: não precisa descongelar\n- Prateleiras de vidro temperado\n\nConte para quem é o produto e o que ele resolve."}
+          placeholder={"## Destaques\n- Som surround 7.1 para ouvir os passos no jogo\n- Almofadas macias para horas de partida\n\nConte para quem é o produto e o que ele resolve."}
           emptyPreview="Escreva a descrição para ver como ela fica na loja."
         />
       </FormField>
@@ -158,7 +158,7 @@ export function InfoSection({
       </div>
 
       <FormField name="tags" label="Tags" htmlFor="p-tags" error={e.tags} hint="Palavras que ajudam a busca da loja a encontrar o produto. Separe por vírgula ou Enter.">
-        <TagsInput id="p-tags" value={v.tags} onChange={(tags) => set("tags", tags)} invalid={!!e.tags} placeholder="ex.: frost free, inox, duas portas" />
+        <TagsInput id="p-tags" value={v.tags} onChange={(tags) => set("tags", tags)} invalid={!!e.tags} placeholder="ex.: gamer, rgb, sem fio" />
       </FormField>
 
       <BrandQuickCreate

@@ -61,7 +61,7 @@ export function BrandQuickCreate({ open, onClose, onCreated }: { open: boolean; 
           value={name}
           maxLength={80}
           autoComplete="off"
-          placeholder="ex.: Electrolux"
+          placeholder="ex.: JBL"
           aria-invalid={!!error}
           onChange={(e) => {
             setName(e.target.value);

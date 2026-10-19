@@ -28,7 +28,7 @@ export type PromotionRow = {
   affected: number;
 };
 
-/** Nomes para a coluna de escopo: "Geladeiras, Fogões +2". */
+/** Nomes para a coluna de escopo: "Headsets Gamer, Controles +2". */
 function names(ids: string[], map: Map<string, string>) {
   const list = ids.map((id) => map.get(id)).filter((n): n is string => !!n);
   if (!list.length) return null;

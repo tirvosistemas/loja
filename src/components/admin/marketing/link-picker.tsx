@@ -122,7 +122,7 @@ export function LinkPicker({
           <Input
             value={value}
             onChange={(e) => emit(e.target.value.trim())}
-            placeholder="/busca?q=geladeira ou https://…"
+            placeholder="/busca?q=headset ou https://…"
             aria-label="Endereço do link"
             aria-invalid={invalid || undefined}
             inputMode="url"

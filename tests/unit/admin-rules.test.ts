@@ -8,7 +8,7 @@ import { shippingSchema, type ShippingSettings } from "@/lib/settings";
 describe("hrefSchema (links de banners, promoções e notificações)", () => {
   it("aceita caminhos da loja, endereços completos e vazio", () => {
     expect(hrefSchema.parse("/ofertas")).toBe("/ofertas");
-    expect(hrefSchema.parse("/categoria/geladeiras?ordem=preco")).toBe("/categoria/geladeiras?ordem=preco");
+    expect(hrefSchema.parse("/categoria/headsets-gamer?ordem=preco")).toBe("/categoria/headsets-gamer?ordem=preco");
     expect(hrefSchema.parse("https://tirvo.com.br/ofertas")).toBe("https://tirvo.com.br/ofertas");
     expect(hrefSchema.parse("  ")).toBeNull();
   });
@@ -35,14 +35,14 @@ describe("imageKeySchema", () => {
 
 describe("productSchema (fotos)", () => {
   const base = {
-    name: "Geladeira Teste",
+    name: "Headset Teste",
     slug: "",
     status: "DRAFT",
     featured: false,
     isNew: false,
     freeShipping: false,
     tags: [],
-    priceCents: 199990,
+    priceCents: 29990,
     trackStock: true,
     stock: 3,
     allowBackorder: false,
@@ -101,8 +101,8 @@ describe("productSchema (URL do produto)", () => {
 
   it("acusa a URL quando o texto não vira endereço", () => {
     expect(paths({ name: "!!!" })).toContain("slug");
-    expect(paths({ name: "Geladeira", slug: "@@@" })).toContain("slug");
-    expect(paths({ name: "Geladeira Frost Free" })).toEqual([]);
+    expect(paths({ name: "Headset", slug: "@@@" })).toContain("slug");
+    expect(paths({ name: "Headset Gamer RGB" })).toEqual([]);
   });
 });
 

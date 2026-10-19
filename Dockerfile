@@ -61,13 +61,13 @@ RUN set -eux; \
     node -e "const f='/opt/app/package.json',p=require(f);delete p.prisma;delete p.devDependencies;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
 
 # ───────── Ferramentas: projeto completo para migrações e seed
-#   docker compose run --rm tools npm run db:seed -- --minimal
+#   docker compose run --rm tools npm run db:seed
 FROM build AS tools
 ENV NODE_ENV=production \
     UPLOAD_DIR=/app/data/uploads
 RUN mkdir -p /app/data/uploads && chown -R node:node /app/data
 ENTRYPOINT ["sh", "/app/docker/entrypoint.sh"]
-CMD ["npm", "run", "db:seed", "--", "--minimal"]
+CMD ["npm", "run", "db:seed"]
 
 # ───────── Imagem final
 FROM base AS runner

@@ -7,7 +7,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const s = await getSettings();
   return {
     id: "/",
-    name: `${s.store.name} · Eletrodomésticos`,
+    name: `${s.store.name} · Eletrônicos`,
     short_name: s.store.name,
     description: s.store.description,
     start_url: "/?origem=app",

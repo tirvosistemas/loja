@@ -6,7 +6,7 @@ import { activeFilterCount, canonicalFor, type RawSearchParams } from "@/compone
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<RawSearchParams> }): Promise<Metadata> {
   const [s, sp] = await Promise.all([getSettings(), searchParams]);
-  const description = `Os eletrodomésticos que acabaram de chegar na ${s.store.name}, com entrega por motoboy em Curitiba e região metropolitana.`;
+  const description = `Os eletrônicos que acabaram de chegar na ${s.store.name}, com entrega por motoboy em Curitiba e região metropolitana.`;
   return { title: "Lançamentos", description, alternates: { canonical: canonicalFor("/lancamentos", sp) }, openGraph: { title: `Lançamentos · ${s.store.name}`, description, url: "/lancamentos" } };
 }
 

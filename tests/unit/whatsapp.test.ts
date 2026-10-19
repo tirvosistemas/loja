@@ -21,18 +21,18 @@ const order = (patch: Partial<OrderForMessage> = {}): OrderForMessage => ({
   reference: "Em frente à praça",
   distanceKm: 4.2,
   items: [
-    { name: "Geladeira Frost Free", variantName: "220V", quantity: 2, unitPriceCents: 300000, totalCents: 600000 },
-    { name: "Air Fryer 4L", variantName: null, quantity: 1, unitPriceCents: 39990, totalCents: 39990 },
+    { name: "Chapinha Titanium", variantName: "220V", quantity: 2, unitPriceCents: 18990, totalCents: 37980 },
+    { name: "Controle sem fio", variantName: null, quantity: 1, unitPriceCents: 24990, totalCents: 24990 },
   ],
-  subtotalCents: 639990,
-  discountCents: 10000,
+  subtotalCents: 62970,
+  discountCents: 5000,
   couponCode: "BEMVINDO",
   pixDiscountCents: 0,
   shippingCents: 1500,
-  totalCents: 631490,
+  totalCents: 59470,
   paymentMethod: "CASH_ON_DELIVERY",
   paymentStatus: "PENDING",
-  changeForCents: 650000,
+  changeForCents: 70000,
   notes: "Entregar depois das 14h",
   trackUrl: "https://tirvo.com.br/pedido/TVABC12",
   ...patch,
@@ -48,16 +48,16 @@ describe("buildOrderMessage", () => {
   });
 
   it("lista os itens com variação, quantidade e valores", () => {
-    expect(msg).toContain("2x Geladeira Frost Free (220V)");
-    expect(msg).toContain(`${formatBRL(600000)} (${formatBRL(300000)} cada)`);
-    expect(msg).toContain("1x Air Fryer 4L");
+    expect(msg).toContain("2x Chapinha Titanium (220V)");
+    expect(msg).toContain(`${formatBRL(37980)} (${formatBRL(18990)} cada)`);
+    expect(msg).toContain("1x Controle sem fio");
   });
 
   it("traz o resumo com cupom, frete e total", () => {
-    expect(msg).toContain(`Subtotal: ${formatBRL(639990)}`);
-    expect(msg).toContain(`Cupom BEMVINDO: -${formatBRL(10000)}`);
+    expect(msg).toContain(`Subtotal: ${formatBRL(62970)}`);
+    expect(msg).toContain(`Cupom BEMVINDO: -${formatBRL(5000)}`);
     expect(msg).toContain(`Frete (4,2 km): ${formatBRL(1500)}`);
-    expect(msg).toContain(`*Total: ${formatBRL(631490)}*`);
+    expect(msg).toContain(`*Total: ${formatBRL(59470)}*`);
   });
 
   it("traz o endereço completo", () => {
@@ -68,9 +68,9 @@ describe("buildOrderMessage", () => {
   });
 
   it("informa o troco no dinheiro", () => {
-    expect(msg).toContain(`Troco para ${formatBRL(650000)} (levar ${formatBRL(650000 - 631490)} de troco)`);
+    expect(msg).toContain(`Troco para ${formatBRL(70000)} (levar ${formatBRL(70000 - 59470)} de troco)`);
     expect(buildOrderMessage(order({ changeForCents: null }))).toContain("Não precisa de troco");
-    expect(buildOrderMessage(order({ changeForCents: 631490 }))).toContain("Não precisa de troco");
+    expect(buildOrderMessage(order({ changeForCents: 59470 }))).toContain("Não precisa de troco");
   });
 
   it("traz observações e o link para acompanhar", () => {
@@ -83,7 +83,7 @@ describe("buildOrderMessage", () => {
   });
 
   it("cupom de frete grátis aparece no resumo", () => {
-    const m = buildOrderMessage(order({ couponCode: "FRETEGRATIS", discountCents: 0, shippingCents: 0, totalCents: 639990 }));
+    const m = buildOrderMessage(order({ couponCode: "FRETEGRATIS", discountCents: 0, shippingCents: 0, totalCents: 62970 }));
     expect(m).toContain("Cupom FRETEGRATIS: frete grátis");
     expect(m).not.toContain("Cupom FRETEGRATIS: -");
   });

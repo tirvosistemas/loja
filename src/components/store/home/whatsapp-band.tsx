@@ -18,7 +18,7 @@ export function WhatsAppBand({ phone, businessHours }: { phone: string; business
               Prefere comprar falando com a gente?
             </h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Tire dúvidas sobre voltagem, medidas, entrega e pagamento com uma pessoa de verdade.
+              Tire dúvidas sobre compatibilidade, voltagem, entrega e pagamento com uma pessoa de verdade.
               {businessHours ? ` Atendimento: ${businessHours}.` : ""}
             </p>
           </div>

@@ -22,7 +22,7 @@ const nullableCents = (d: number | null) => z.number().int().min(0).nullable().d
 export const storeSchema = z.object({
   name: str("Tirvo"),
   tagline: str("Se algo pode ser melhorado, ainda não está pronto."),
-  description: str("Eletrodomésticos com entrega rápida por motoboy em Curitiba e região metropolitana."),
+  description: str("Eletrônicos e acessórios com entrega rápida por motoboy em Curitiba e região metropolitana."),
   whatsapp: str(""), // número que recebe os pedidos, só dígitos com DDI: 5541999998888
   phone: str(""),
   email: str(""),
@@ -104,11 +104,11 @@ export const pushSchema = z.object({
 });
 
 export const seoSchema = z.object({
-  title: str("Tirvo · Eletrodomésticos em Curitiba e região"),
+  title: str("Tirvo · Eletrônicos em Curitiba e região"),
   description: str(
-    "Geladeiras, fogões, lavadoras, ar-condicionado e eletroportáteis com entrega rápida por motoboy em Curitiba e região metropolitana.",
+    "Headsets, fones, controles, minigames, suportes de celular, acessórios para carro, chapinhas e mais, com entrega rápida por motoboy em Curitiba e região metropolitana.",
   ),
-  keywords: str("eletrodomésticos, Curitiba, geladeira, fogão, lavadora, ar-condicionado, air fryer"),
+  keywords: str("eletrônicos, Curitiba, headset gamer, fone de ouvido, controle de videogame, minigame, suporte de celular, chapinha, babyliss, massageador"),
   ogImage: str("/og-image.png"),
 });
 

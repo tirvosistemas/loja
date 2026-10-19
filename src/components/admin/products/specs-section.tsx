@@ -11,14 +11,14 @@ import { rowKey, type SpecRow, type VoltageKey } from "./form-values";
 const MAX_SPECS = 60;
 
 const COMMON_LABELS = [
-  "Capacidade",
+  "Conexão",
+  "Bateria",
+  "Autonomia",
+  "Tempo de carga",
+  "Compatibilidade",
   "Potência",
-  "Consumo de energia",
-  "Selo Procel",
-  "Classificação energética",
-  "Tipo de degelo",
-  "Número de bocas",
-  "Acendimento",
+  "Temperatura máxima",
+  "Alcance",
   "Material",
   "Cor",
   "Itens inclusos",
@@ -30,23 +30,23 @@ const VOLTAGE_OPTIONS: { value: VoltageKey; label: string }[] = [
   { value: "V110", label: "110V" },
   { value: "V220", label: "220V" },
   { value: "BIVOLT", label: "Bivolt" },
-  { value: "NA", label: "Não se aplica (gás, manual…)" },
+  { value: "NA", label: "Não se aplica (bateria, USB…)" },
 ];
 
 const PLACEHOLDERS: Record<string, string> = {
-  Capacidade: "ex.: 375 litros",
-  Potência: "ex.: 1.500 W",
-  "Consumo de energia": "ex.: 35,8 kWh/mês",
-  "Selo Procel": "ex.: Sim, classe A",
-  "Classificação energética": "ex.: A",
-  "Tipo de degelo": "ex.: Frost free",
-  "Número de bocas": "ex.: 5",
-  Acendimento: "ex.: Automático",
-  Material: "ex.: Aço inox",
-  Cor: "ex.: Inox",
-  "Itens inclusos": "ex.: 2 grades, manual",
-  "Dimensões da embalagem": "ex.: 72 × 185 × 78 cm",
-  "Peso da embalagem": "ex.: 68 kg",
+  Conexão: "ex.: Bluetooth 5.3",
+  Bateria: "ex.: 500 mAh",
+  Autonomia: "ex.: Até 20 h",
+  "Tempo de carga": "ex.: 2 h",
+  Compatibilidade: "ex.: PS5, Xbox, PC e celular",
+  Potência: "ex.: 40 W",
+  "Temperatura máxima": "ex.: 230 °C",
+  Alcance: "ex.: 10 m",
+  Material: "ex.: Plástico ABS",
+  Cor: "ex.: Preto",
+  "Itens inclusos": "ex.: Cabo USB-C, manual",
+  "Dimensões da embalagem": "ex.: 20 × 22 × 10 cm",
+  "Peso da embalagem": "ex.: 450 g",
 };
 
 export function SpecsSection({ form, active }: { form: FormApi; active: boolean }) {
@@ -89,15 +89,15 @@ export function SpecsSection({ form, active }: { form: FormApi; active: boolean 
           <NumberInput id="p-warranty" integer allowEmpty min={0} max={240} suffix="meses" placeholder="12" value={v.warrantyMonths} onChange={(n) => set("warrantyMonths", n)} aria-invalid={!!e.warrantyMonths} />
         </FormField>
         <FormField name="model" label="Modelo" htmlFor="p-model" error={e.model} hint="Código do fabricante. Também entra na busca do painel.">
-          <Input id="p-model" value={v.model} maxLength={80} placeholder="ex.: TF56S" aria-invalid={!!e.model} onChange={(ev) => set("model", ev.target.value)} />
+          <Input id="p-model" value={v.model} maxLength={80} placeholder="ex.: HS-710" aria-invalid={!!e.model} onChange={(ev) => set("model", ev.target.value)} />
         </FormField>
         <FormField name="color" label="Cor" htmlFor="p-color" error={e.color}>
-          <Input id="p-color" value={v.color} maxLength={60} placeholder="ex.: Inox" aria-invalid={!!e.color} onChange={(ev) => set("color", ev.target.value)} />
+          <Input id="p-color" value={v.color} maxLength={60} placeholder="ex.: Preto" aria-invalid={!!e.color} onChange={(ev) => set("color", ev.target.value)} />
         </FormField>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <FormField name="weightGrams" label="Peso" htmlFor="p-weight" error={e.weightGrams} hint="Do produto, em gramas (ex.: 68 kg = 68000).">
+        <FormField name="weightGrams" label="Peso" htmlFor="p-weight" error={e.weightGrams} hint="Do produto, em gramas (ex.: 1,2 kg = 1200).">
           <NumberInput id="p-weight" integer allowEmpty min={0} max={10_000_000} suffix="g" value={v.weightGrams} onChange={(n) => set("weightGrams", n)} aria-invalid={!!e.weightGrams} />
         </FormField>
         <fieldset data-field="dimensions" className="min-w-0">
@@ -119,7 +119,7 @@ export function SpecsSection({ form, active }: { form: FormApi; active: boolean 
             ))}
           </div>
           <p className={cn("mt-1.5 text-[13px]", e.widthCm || e.heightCm || e.depthCm ? "text-danger" : "text-subtle")}>
-            {e.widthCm || e.heightCm || e.depthCm || "Aceita decimais (ex.: 70,5)."}
+            {e.widthCm || e.heightCm || e.depthCm || "Aceita decimais (ex.: 18,5)."}
           </p>
         </fieldset>
       </div>
@@ -166,7 +166,7 @@ export function SpecsSection({ form, active }: { form: FormApi; active: boolean 
                     <label htmlFor={`spec-${s.key}-label`} className="sr-only">
                       Nome da especificação {i + 1}
                     </label>
-                    <Input id={`spec-${s.key}-label`} value={s.label} maxLength={60} placeholder="ex.: Capacidade" aria-invalid={!!errLabel} onChange={(ev) => update(i, { label: ev.target.value })} className="font-medium" />
+                    <Input id={`spec-${s.key}-label`} value={s.label} maxLength={60} placeholder="ex.: Conexão" aria-invalid={!!errLabel} onChange={(ev) => update(i, { label: ev.target.value })} className="font-medium" />
                     {errLabel && <p className="mt-1 text-[13px] text-danger">{errLabel}</p>}
                   </div>
                   <div data-field={`specs.${i}.value`} className="col-span-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1">

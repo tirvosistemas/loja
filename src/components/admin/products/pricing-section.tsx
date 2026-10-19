@@ -73,7 +73,7 @@ export function PricingSection({ form, active }: { form: FormApi; active: boolea
             autoCapitalize="characters"
             spellCheck={false}
             className="font-mono"
-            placeholder="ex.: GEL-375-INOX"
+            placeholder="ex.: HS-RGB-71-PT"
             aria-invalid={!!e.sku}
             onChange={(ev) => set("sku", ev.target.value)}
           />

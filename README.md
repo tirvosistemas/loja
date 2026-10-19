@@ -1,13 +1,13 @@
-# Tirvo · loja de eletrodomésticos
+# Tirvo · loja de eletrônicos
 
 > Se algo pode ser melhorado, ainda não está pronto.
 
-Loja virtual de eletrodomésticos que vende **só para Curitiba e região metropolitana**, entrega por **motoboy** com frete calculado por km a partir da loja e recebe os pedidos **no WhatsApp** da loja, já organizados. O dono configura tudo pelo painel em `/admin`.
+Loja virtual de eletrônicos (headsets gamer, fones de ouvido, controles, minigames, caixas de som, suportes de celular, acessórios para carro, carregadores, chapinhas, babyliss, massageadores, smartwatches e periféricos) que vende **só para Curitiba e região metropolitana**, entrega por **motoboy** com frete calculado por km a partir da loja e recebe os pedidos **no WhatsApp** da loja, já organizados. O dono configura tudo pelo painel em `/admin`.
 
 ## O que a loja faz
 
 - **Vitrine completa:** página inicial com banners rotativos, ofertas relâmpago com contagem regressiva, lançamentos, mais vendidos, categorias, marcas, busca com sugestões, filtros (marca, voltagem, preço, oferta, estoque, frete grátis) e favoritos.
-- **Página do produto:** galeria, variações de voltagem com estoque próprio, ficha técnica, avaliações moderadas e cálculo de frete pelo CEP.
+- **Página do produto:** galeria, variações (voltagem, cor ou modelo) com estoque próprio, ficha técnica, avaliações moderadas e cálculo de frete pelo CEP.
 - **Carrinho e checkout:** cupons, frete por km calculado na hora, desconto no Pix, retirada na loja e validação de preços e estoque sempre no servidor.
 - **Pedido pelo WhatsApp:** ao finalizar, o cliente envia a mensagem pronta (itens, endereço, frete, pagamento) para o WhatsApp da loja e acompanha o pedido em `/pedido/<código>`.
 - **Pagamentos:** online pela **Stripe** (cartão, Pix ou boleto), **Pix** para a chave da loja ou **na entrega** (dinheiro com troco, maquininha ou Pix).
@@ -45,7 +45,7 @@ UPLOAD_DIR=./data/uploads
 ```
 
 ```bash
-# 3. Dependências, banco e loja de demonstração
+# 3. Dependências, banco e carga inicial
 npm install
 npx prisma migrate deploy
 npm run db:seed
@@ -56,17 +56,16 @@ npm run dev
 
 Abra <http://localhost:3000>. O painel fica em <http://localhost:3000/admin> (login com `ADMIN_EMAIL` e `ADMIN_PASSWORD`).
 
-O seed de demonstração cria 35 produtos com ilustrações geradas, banners, promoções, cupons (`BEMVINDO10`, `FRETEGRATIS`, `TIRVO50`), avaliações, pedidos de exemplo e as páginas institucionais. Ele usa um **WhatsApp, endereço e chave Pix de demonstração**: troque no painel antes de vender.
+Não existe mais loja de demonstração: o seed cria o administrador, as configurações, as páginas institucionais e as **categorias de eletrônicos** (headsets gamer, fones de ouvido, controles, minigames, caixas de som, suportes de celular, acessórios para carro, carregadores e cabos, beleza e cabelo, massageadores, smartwatches e periféricos, com subcategorias). A loja abre vazia, com as seções da página inicial prontas, esperando os produtos cadastrados no painel. Pode rodar de novo quando quiser: só cria o que falta e não mexe no que você já editou.
 
 | Comando | O que faz |
 | --- | --- |
-| `npm run db:seed` | Admin, configurações e loja de demonstração (só se ainda não houver produtos) |
-| `npm run db:seed -- --reset` | Apaga catálogo, pedidos e conteúdo e recria a demonstração (usuários e configurações ficam) |
-| `npm run db:seed -- --minimal` | Só admin, configurações, páginas e categorias: o ponto de partida da loja real |
-| `npm run db:seed -- --demo-settings` | Regrava WhatsApp, endereço e Pix de demonstração |
-| `npm run db:seed -- --minimal --reset-admin-password` | Volta a senha do `ADMIN_EMAIL` para a do `ADMIN_PASSWORD` |
+| `npm run db:seed` | Admin, configurações, páginas e categorias de eletrônicos (só cria o que falta) |
+| `npm run db:seed -- --reset` | Apaga produtos, pedidos, marketing, categorias, marcas e páginas e recria páginas e categorias (usuários e configurações ficam) |
+| `npm run db:seed -- --demo-settings` | Preenche WhatsApp, endereço e Pix de **demonstração**, para testar o checkout no computador (troque no painel antes de vender) |
+| `npm run db:seed -- --reset-admin-password` | Volta a senha do `ADMIN_EMAIL` para a do `ADMIN_PASSWORD` |
 
-Outros comandos: `npm run typecheck` (tipos), `npm test` (testes unitários), `npm run test:e2e` (testes de ponta a ponta com Playwright, com a demonstração carregada e o `npm run dev` rodando), `npm run db:studio` (ver o banco).
+Outros comandos: `npm run typecheck` (tipos), `npm test` (testes unitários), `npm run test:e2e` (testes de ponta a ponta com Playwright, com o `npm run dev` rodando; eles criam sozinhos um produto temporário de teste no banco, por isso precisam do `DATABASE_URL`, e apagam no final), `npm run db:studio` (ver o banco).
 
 ---
 
@@ -85,7 +84,7 @@ Em **Painel → Configurações**, nesta ordem:
 6. **App e notificações:** as chaves de notificação são geradas sozinhas. Ajuste o convite para ativar as notificações. As campanhas são enviadas em **Marketing → Notificações do app**.
 7. **SEO e aparência:** título e descrição para o Google, imagem de compartilhamento, tema padrão (escuro ou claro) e seções da página inicial.
 
-Depois: cadastre **categorias, marcas e produtos**, os **banners**, **promoções** e **cupons**, revise as **páginas** (trocas, entregas, privacidade…) e, em **Usuários**, troque a senha do administrador e crie acessos para a equipe (proprietário, administrador ou editor).
+Depois: confira as **categorias** (as de eletrônicos já vêm criadas pelo seed; renomeie, esconda ou crie outras à vontade), cadastre **marcas e produtos**, os **banners**, **promoções** e **cupons**, revise as **páginas** (trocas, entregas, privacidade…) e, em **Usuários**, troque a senha do administrador e crie acessos para a equipe (proprietário, administrador ou editor).
 
 ---
 
@@ -136,13 +135,13 @@ cd ~/tirvo-loja
 bash deploy/oracle-setup.sh
 ```
 
-O script pergunta o **domínio**, o **e-mail do administrador** e se quer carregar a **loja de demonstração**. Ele:
+O script pergunta o **domínio** e o **e-mail do administrador**. Ele:
 
 - atualiza o Ubuntu, ajusta o fuso para `America/Sao_Paulo`, cria 2 GB de swap e ativa as atualizações automáticas de segurança;
 - instala o Docker Engine e o Docker Compose (repositório oficial) e libera as portas 80/443 no firewall da VM (as imagens da Oracle bloqueiam tudo além do SSH);
 - cria o `.env` com senhas e `AUTH_SECRET` aleatórios;
 - constrói e sobe MySQL, app e Caddy (a primeira vez leva de 5 a 15 minutos);
-- prepara o banco (`--minimal` ou demonstração) e agenda o backup diário.
+- prepara o banco com `npm run db:seed` (administrador, configurações, páginas e categorias de eletrônicos, sem produtos de exemplo) e agenda o backup diário.
 
 > Repositório privado? Crie uma chave na VM (`ssh-keygen -t ed25519`), adicione o conteúdo de `~/.ssh/id_ed25519.pub` em *GitHub → Settings → Deploy keys* do repositório e clone com `git clone git@github.com:SEU-USUARIO/tirvo-loja.git ~/tirvo-loja`.
 
@@ -225,7 +224,7 @@ e faça um pedido com o cartão de teste `4242 4242 4242 4242`.
 
 **Esqueci a senha do painel.** Na VM, coloque uma nova senha em `ADMIN_PASSWORD` no `.env` e rode:
 ```bash
-docker compose run --rm tools npm run db:seed -- --minimal --reset-admin-password
+docker compose run --rm tools npm run db:seed -- --reset-admin-password
 ```
 
 **Troquei a `AUTH_SECRET`.** Todos saem do painel e as chaves salvas (Stripe, mapas e notificações) precisam ser cadastradas de novo; os inscritos em notificações precisam ativá-las outra vez.
@@ -240,7 +239,7 @@ src/app/admin/       painel
 src/app/api/         carrinho, frete, pedidos, Stripe, notificações, uploads
 src/lib/             regras: preços, cupons, frete, pedidos, configurações
 src/components/      interface da loja, do painel e componentes base
-prisma/              schema, migrações e seed (com gerador de ilustrações em prisma/seed/)
+prisma/              schema, migrações e seed (páginas e categorias iniciais em prisma/seed/)
 Dockerfile, docker-compose.yml, docker/   imagem de produção, MySQL e Caddy
 deploy/              instalação na VM, atualização, backup e restauração
 tests/               unitários (Vitest) e ponta a ponta (Playwright)

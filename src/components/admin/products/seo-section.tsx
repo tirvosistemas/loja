@@ -41,7 +41,7 @@ export function SeoSection({ form, active, storeName, siteHost, isNew }: { form:
           value={v.slug}
           maxLength={120}
           invalid={!!e.slug}
-          placeholder="geladeira-frost-free-375l"
+          placeholder="headset-gamer-rgb-7-1"
           onChange={(s) => {
             patch({ slug: s, slugAuto: false });
             clearErrors("slug");

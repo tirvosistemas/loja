@@ -32,7 +32,7 @@ export function parseHref(href: string | null | undefined): { kind: LinkKind; sl
   return { kind: "url", slug: "" };
 }
 
-/** Descrição curta de um link salvo, para listas ("Categoria: Geladeiras"). */
+/** Descrição curta de um link salvo, para listas ("Categoria: Headsets Gamer"). */
 export function describeHref(href: string | null | undefined, names?: { categories?: Map<string, string>; brands?: Map<string, string>; pages?: Map<string, string> }) {
   const { kind, slug } = parseHref(href);
   if (kind === "none") return "Sem link";

@@ -12,7 +12,7 @@ import { activeFilterCount, canonicalFor, type RawSearchParams } from "@/compone
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<RawSearchParams> }): Promise<Metadata> {
   const [s, sp] = await Promise.all([getPublicSettings(), searchParams]);
-  const description = `Ofertas e promoções de eletrodomésticos na ${s.store.name}, com entrega rápida por motoboy em Curitiba e região metropolitana.`;
+  const description = `Ofertas e promoções de eletrônicos na ${s.store.name}, com entrega rápida por motoboy em Curitiba e região metropolitana.`;
   return { title: "Ofertas", description, alternates: { canonical: canonicalFor("/ofertas", sp) }, openGraph: { title: `Ofertas · ${s.store.name}`, description, url: "/ofertas" } };
 }
 
@@ -42,7 +42,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
               Desconto de verdade, <span className="text-brand">entrega rápida.</span>
             </h1>
             <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-              Eletrodomésticos com preço baixo e entrega por motoboy em Curitiba e região.
+              Eletrônicos com preço baixo e entrega por motoboy em Curitiba e região.
               {settings.payment.pixDiscountPercent > 0 && ` No Pix, você ganha mais ${settings.payment.pixDiscountPercent}% de desconto.`}
             </p>
             {campaigns.length > 0 && (

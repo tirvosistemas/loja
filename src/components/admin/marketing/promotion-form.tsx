@@ -132,10 +132,10 @@ export function PromotionForm({
         <div className="min-w-0 space-y-5">
           <Section title="Promoção">
             <SettingsField name="name" htmlFor="p-name" label="Nome" required error={e.name} hint="Para você se organizar. Aparece na notificação.">
-              <Input id="p-name" value={v.name} maxLength={120} placeholder="Ex.: Semana da Geladeira" onChange={(x) => set("name", x.target.value)} aria-invalid={!!e.name} />
+              <Input id="p-name" value={v.name} maxLength={120} placeholder="Ex.: Semana Gamer" onChange={(x) => set("name", x.target.value)} aria-invalid={!!e.name} />
             </SettingsField>
             <SettingsField name="description" htmlFor="p-desc" label={<LabelWithCount value={v.description} max={500}>Descrição</LabelWithCount>} error={e.description} hint="Opcional. Usada como texto da notificação.">
-              <Textarea id="p-desc" rows={2} value={v.description} maxLength={500} placeholder="Ex.: Geladeiras e freezers com até 20% OFF e entrega em 24 h." onChange={(x) => set("description", x.target.value)} />
+              <Textarea id="p-desc" rows={2} value={v.description} maxLength={500} placeholder="Ex.: Headsets e controles com até 20% OFF e entrega em 24 h." onChange={(x) => set("description", x.target.value)} />
             </SettingsField>
           </Section>
 

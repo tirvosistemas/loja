@@ -98,7 +98,7 @@ export function Footer({
               <span id="rodape-categorias">Categorias</span>
             </ColumnTitle>
             <ul className="space-y-1">
-              {categories.slice(0, 10).map((c) => (
+              {categories.slice(0, 12).map((c) => (
                 <li key={c.id}>
                   <Link href={`/categoria/${c.slug}`} className={linkCls}>
                     {c.name}

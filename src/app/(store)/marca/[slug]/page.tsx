@@ -15,9 +15,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const [b, s] = await Promise.all([getBrandMeta(slug), getSettings()]);
   if (!b) return { title: "Marca não encontrada", robots: { index: false } };
-  const description = `Eletrodomésticos ${b.name} com entrega rápida por motoboy em Curitiba e região metropolitana. Veja preços e ofertas na ${s.store.name}.`;
+  const description = `Eletrônicos ${b.name} com entrega rápida por motoboy em Curitiba e região metropolitana. Veja preços e ofertas na ${s.store.name}.`;
   return {
-    title: `${b.name}: eletrodomésticos`,
+    title: `${b.name}: eletrônicos`,
     description,
     alternates: { canonical: canonicalFor(`/marca/${b.slug}`, sp) },
     openGraph: { title: b.name, description, url: `/marca/${b.slug}`, ...(b.logo ? { images: [{ url: absImage(b.logo) }] } : {}) },

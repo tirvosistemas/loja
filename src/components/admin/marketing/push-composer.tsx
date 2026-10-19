@@ -90,7 +90,7 @@ export function PushComposer({ subscribers, links, storeName }: { subscribers: n
         </div>
 
         <Field label={<LabelWithCount value={v.title} max={PUSH_TITLE_MAX} required>Título</LabelWithCount>} htmlFor="push-title" error={errors.title}>
-          <Input id="push-title" value={v.title} onChange={(e) => set("title", e.target.value)} placeholder="Ex.: 🔥 Air fryers com 20% OFF" aria-invalid={!!errors.title} />
+          <Input id="push-title" value={v.title} onChange={(e) => set("title", e.target.value)} placeholder="Ex.: 🎧 Headsets com 20% OFF" aria-invalid={!!errors.title} />
         </Field>
         <Field label={<LabelWithCount value={v.body} max={PUSH_BODY_MAX} required>Mensagem</LabelWithCount>} htmlFor="push-body" error={errors.body}>
           <Textarea id="push-body" rows={3} value={v.body} onChange={(e) => set("body", e.target.value)} placeholder="Ex.: Só até domingo, com entrega no mesmo dia em Curitiba." aria-invalid={!!errors.body} />

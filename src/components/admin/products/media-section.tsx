@@ -52,7 +52,7 @@ export function MediaSection({ form, active }: { form: FormApi; active: boolean 
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[13px] text-subtle">Escreva uma descrição em cada foto (ex.: “Geladeira aberta, vista interna”): ajuda no Google e na acessibilidade.</p>
+        <p className="mt-2 text-[13px] text-subtle">Escreva uma descrição em cada foto (ex.: “Headset de lado, mostrando o microfone”): ajuda no Google e na acessibilidade.</p>
       </div>
 
       <FormField name="videoUrl" label="Vídeo do produto" htmlFor="p-video" error={e.videoUrl} hint="Opcional. Cole o link do YouTube ou do fabricante.">

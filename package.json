@@ -2,7 +2,7 @@
   "name": "tirvo-loja",
   "version": "1.0.0",
   "private": true,
-  "description": "Tirvo — loja virtual de eletrodomésticos (Curitiba e região metropolitana)",
+  "description": "Tirvo — loja virtual de eletrônicos (Curitiba e região metropolitana)",
   "engines": {
     "node": ">=22"
   },

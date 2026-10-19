@@ -7,11 +7,11 @@ export const PAGES: SeedPage[] = [
   {
     slug: "sobre-nos",
     title: "Sobre a Tirvo",
-    content: `A Tirvo é uma loja de eletrodomésticos de Curitiba que nasceu com uma ideia simples: **se algo pode ser melhorado, ainda não está pronto**. Por isso a gente revisa cada detalhe da compra, do preço ao momento em que o produto chega na sua casa.
+    content: `A Tirvo é uma loja de eletrônicos de Curitiba que nasceu com uma ideia simples: **se algo pode ser melhorado, ainda não está pronto**. Por isso a gente revisa cada detalhe da compra, do preço ao momento em que o produto chega na sua casa.
 
 ## O que fazemos
 
-Vendemos geladeiras, fogões, lavadoras, ar-condicionado, eletroportáteis, TVs e muito mais, sempre de marcas reconhecidas e com nota fiscal e garantia do fabricante.
+Vendemos headsets gamer, fones de ouvido, controles, minigames, caixas de som, suportes de celular para moto, bicicleta e carro, acessórios eletrônicos para carro, carregadores e cabos, chapinhas, babyliss, massageadores, smartwatches e muito mais, sempre com nota fiscal e garantia.
 
 Atendemos **somente Curitiba e região metropolitana**. Essa escolha é o que permite entregar rápido, com motoboy e frota próprios, e cobrar um frete justo, calculado pela distância real até o seu endereço.
 
@@ -24,7 +24,7 @@ Atendemos **somente Curitiba e região metropolitana**. Essa escolha é o que pe
 
 ## Fale com a gente
 
-Tem dúvida sobre um produto, medida ou instalação? Chame no WhatsApp pelo botão do site. A gente responde em horário comercial e ajuda você a escolher o aparelho certo para a sua casa.`,
+Tem dúvida sobre um produto, compatibilidade ou voltagem? Chame no WhatsApp pelo botão do site. A gente responde em horário comercial e ajuda você a escolher o eletrônico certo para o seu celular, videogame ou dia a dia.`,
   },
   {
     slug: "como-comprar",
@@ -33,7 +33,7 @@ Tem dúvida sobre um produto, medida ou instalação? Chame no WhatsApp pelo bot
 
 ## Passo a passo
 
-1. **Escolha os produtos.** Na página do produto, selecione a voltagem (110V ou 220V), quando houver, e toque em **Adicionar ao carrinho**.
+1. **Escolha os produtos.** Na página do produto, selecione a opção (cor, modelo ou voltagem), quando houver, e toque em **Adicionar ao carrinho**.
 2. **Confira o carrinho.** Ajuste quantidades, aplique um cupom de desconto e informe o CEP para ver o frete na hora.
 3. **Finalize o pedido.** No checkout, preencha nome, WhatsApp e endereço completo, ou escolha **retirar na loja**.
 4. **Escolha como pagar.** Veja as opções abaixo.
@@ -80,8 +80,8 @@ Assim que o pedido sair para entrega, avisamos pelo WhatsApp. Você também acom
 ## Recebimento
 
 - Confira a embalagem na frente do entregador. Se houver avaria, recuse o produto e avise a gente na hora.
-- Produtos grandes são entregues no térreo ou na portaria. Se precisar subir escadas, combine antes pelo WhatsApp.
-- Não fazemos instalação, mas indicamos profissionais de confiança quando você precisar.
+- Confira na caixa se o modelo, a cor e a voltagem são os do pedido.
+- Guarde a nota fiscal e a embalagem: elas facilitam a troca e o acionamento da garantia.
 
 ## Retirada na loja
 
@@ -240,9 +240,13 @@ Use a página **Acompanhar pedido**, no menu, com o código do pedido e o seu Wh
 
 Todos os produtos são novos, com nota fiscal e garantia do fabricante. O prazo aparece na página de cada produto.
 
-## Vocês instalam ar-condicionado ou cooktop?
+## Qual é a voltagem da chapinha, do babyliss ou do secador?
 
-Não fazemos instalação, mas indicamos profissionais parceiros de confiança. Pergunte no WhatsApp.
+A voltagem (110V, 220V ou bivolt) aparece na página de cada produto. Quando há mais de uma opção, você escolhe antes de adicionar ao carrinho.
+
+## O controle ou o headset funciona no meu videogame?
+
+A compatibilidade (PC, PlayStation, Xbox, Nintendo Switch ou celular) aparece na descrição do produto. Na dúvida, pergunte no WhatsApp antes de comprar.
 
 ## Posso trocar se me arrepender?
 

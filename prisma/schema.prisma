@@ -47,7 +47,7 @@ model Category {
   slug        String     @unique
   description String?    @db.Text
   image       String?
-  icon        String? // nome de ícone lucide (ex.: "refrigerator")
+  icon        String? // nome de ícone lucide (ex.: "headset")
   parentId    String?
   parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[] @relation("CategoryTree")
@@ -113,7 +113,7 @@ model Product {
   color            String?
   model            String? // modelo do fabricante
   ean              String?
-  specs            Json? // [{ "label": "Capacidade", "value": "375 L" }]
+  specs            Json? // [{ "label": "Conexão", "value": "Bluetooth 5.3" }]
   tags             String?          @db.VarChar(500) // separadas por vírgula
   videoUrl         String?
   metaTitle        String?
@@ -156,7 +156,7 @@ model ProductVariant {
   id             String   @id @default(cuid())
   productId      String
   product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name           String // ex.: "220V", "Inox · 110V"
+  name           String // ex.: "220V", "Preto · Bivolt"
   sku            String?  @unique
   priceCents     Int? // se vazio, usa o preço do produto
   compareAtCents Int?

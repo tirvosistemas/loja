@@ -57,7 +57,7 @@ export default async function SearchPage({ searchParams }: Props) {
               title: `Não encontramos nada para “${q}”`,
               description: (
                 <>
-                  Confira a ortografia, use termos mais gerais (ex.: “geladeira” em vez do modelo) ou busque pela marca.
+                  Confira a ortografia, use termos mais gerais (ex.: “headset” em vez do modelo) ou busque pela marca.
                 </>
               ),
               extra: suggestions,

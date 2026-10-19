@@ -8,7 +8,7 @@ export type BrandOption = { id: string; name: string; slug: string; active: bool
 export type PageOption = { slug: string; title: string; published: boolean };
 export type PickerOptions = { categories: CategoryOption[]; brands: BrandOption[]; pages: PageOption[] };
 
-/** Categorias (em árvore, com o caminho "Cozinha › Fogões"), marcas e páginas para os seletores. */
+/** Categorias (em árvore, com o caminho "Suportes de Celular › Suporte para Moto"), marcas e páginas para os seletores. */
 export async function getPickerOptions(): Promise<PickerOptions> {
   const [cats, brands, pages] = await Promise.all([
     db.category.findMany({ select: { id: true, name: true, slug: true, parentId: true, active: true, sortOrder: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),

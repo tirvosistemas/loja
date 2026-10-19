@@ -149,7 +149,7 @@ function EmptyCart() {
         <Eyebrow className="mt-6">Carrinho vazio</Eyebrow>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight">Seu carrinho está esperando</h2>
         <p className="mt-2 text-[15px] text-muted-foreground">
-          Confira as ofertas da semana ou busque o eletrodoméstico que está faltando na sua casa.
+          Confira as ofertas da semana ou busque o headset, o fone ou o acessório que está faltando.
         </p>
         <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Link href="/ofertas" className={buttonVariants({ variant: "primary", size: "lg" })}>

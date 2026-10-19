@@ -31,7 +31,7 @@ function highlight(text: string, term: string): ReactNode {
 }
 
 /** Busca com sugestões (produtos e categorias) enquanto a pessoa digita. */
-export function SearchAutocomplete({ inputId, className, placeholder = "Buscar geladeira, air fryer, lavadora..." }: { inputId: string; className?: string; placeholder?: string }) {
+export function SearchAutocomplete({ inputId, className, placeholder = "Buscar headset, controle, suporte de celular..." }: { inputId: string; className?: string; placeholder?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const listId = useId();

@@ -8,7 +8,6 @@
 #
 # Variáveis opcionais (para rodar sem perguntas):
 #   DOMAIN=loja.exemplo.com.br ADMIN_EMAIL=voce@exemplo.com.br APP_DIR=~/tirvo-loja
-#   DEMO=1  carrega a loja de demonstração (produtos, banners e pedidos de exemplo)
 
 set -Eeuo pipefail
 
@@ -238,18 +237,8 @@ done
 if [ "${status:-}" = "healthy" ]; then ok "App respondendo"; else warn "O app ainda não respondeu. Veja os logs: docker compose logs -f app"; fi
 
 if [ ! -f data/.seed-done ]; then
-  demo="${DEMO:-}"
-  if [ -z "$demo" ]; then
-    answer="$(ask "Carregar a loja de demonstração com produtos, banners e pedidos de exemplo? (s/N)" "n")"
-    case "$answer" in s|S|sim|SIM|y|Y) demo=1 ;; *) demo=0 ;; esac
-  fi
-  if [ "$demo" = "1" ]; then
-    info "Carregando a loja de demonstração"
-    $DOCKER compose run --rm -T tools npm run db:seed
-  else
-    info "Primeira carga: administrador, configurações, páginas e categorias"
-    $DOCKER compose run --rm -T tools npm run db:seed -- --minimal
-  fi
+  info "Primeira carga: administrador, configurações, páginas e categorias"
+  $DOCKER compose run --rm -T tools npm run db:seed
   date -Iseconds >data/.seed-done
   ok "Banco preparado"
 fi

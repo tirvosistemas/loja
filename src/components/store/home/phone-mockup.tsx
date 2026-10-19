@@ -1,10 +1,10 @@
-import { AirVent, BellRing, Heart, House, LayoutGrid, Microwave, Refrigerator, Search, ShoppingBag, WashingMachine } from "lucide-react";
+import { BellRing, Gamepad2, Headset, Heart, House, LayoutGrid, Search, ShoppingBag, Smartphone, Watch } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
 /** Celular desenhado em CSS com uma versão em miniatura da loja (decorativo). */
 export function PhoneMockup({ className, storeName = "Tirvo" }: { className?: string; storeName?: string }) {
-  const cats = [Refrigerator, WashingMachine, AirVent, Microwave];
+  const cats = [Headset, Gamepad2, Smartphone, Watch];
   return (
     <div aria-hidden className={cn("relative mx-auto w-[248px] select-none sm:w-[272px]", className)}>
       <div className="glow-orange absolute -inset-16 -z-10" />

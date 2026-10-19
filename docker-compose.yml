@@ -1,8 +1,8 @@
 # Tirvo em produção: MySQL + app (Next.js) + Caddy (HTTPS).
 #
-#   docker compose up -d --build                                  sobe tudo
-#   docker compose run --rm tools npm run db:seed -- --minimal    primeira carga (admin, páginas, categorias)
-#   docker compose logs -f app                                    acompanha o app
+#   docker compose up -d --build                     sobe tudo
+#   docker compose run --rm tools npm run db:seed    primeira carga (admin, configurações, páginas, categorias)
+#   docker compose logs -f app                       acompanha o app
 #
 # As variáveis vêm do arquivo .env (copie de .env.example). Só o Caddy publica portas;
 # o MySQL e o app ficam acessíveis apenas dentro da rede do Compose.

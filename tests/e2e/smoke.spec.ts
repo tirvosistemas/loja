@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // Fumaça da loja: página inicial, produto, carrinho, checkout e login no painel.
-// Rode com a loja de demonstração carregada (npm run db:seed).
+// Precisa do banco com o seed (npm run db:seed) e do DATABASE_URL: o produto usado aqui é
+// temporário, criado e apagado pelo globalSetup/globalTeardown (playwright.config.ts).
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@tirvo.com.br";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "tirvo123";
@@ -18,9 +19,10 @@ test.beforeEach(async ({ page }) => {
 
 /** Links de produto visíveis na página atual (sem repetir). */
 async function productLinks(page: Page) {
-  const hrefs = await page
-    .locator('main a[href^="/produto/"]')
-    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? "").filter(Boolean));
+  const links = page.locator('main a[href^="/produto/"]');
+  // A página inicial chega em streaming (loading.tsx): espera o primeiro produto aparecer.
+  await links.first().waitFor({ state: "attached", timeout: 15_000 }).catch(() => null);
+  const hrefs = await links.evaluateAll((els) => els.map((a) => a.getAttribute("href") ?? "").filter(Boolean));
   return [...new Set(hrefs)];
 }
 
@@ -28,7 +30,7 @@ async function productLinks(page: Page) {
 async function openBuyableProduct(page: Page) {
   await page.goto("/");
   const hrefs = await productLinks(page);
-  expect(hrefs.length, "a página inicial deveria listar produtos (rode o seed de demonstração)").toBeGreaterThan(0);
+  expect(hrefs.length, "a página inicial deveria listar produtos (o produto de teste do globalSetup precisa do DATABASE_URL)").toBeGreaterThan(0);
   for (const href of hrefs.slice(0, 8)) {
     // Espera a página hidratar: um clique antes disso não chega ao React.
     await page.goto(href, { waitUntil: "networkidle" });
@@ -38,12 +40,13 @@ async function openBuyableProduct(page: Page) {
   throw new Error("Nenhum produto com estoque encontrado entre os primeiros da página inicial.");
 }
 
-test("página inicial mostra o logo animado e produtos", async ({ page }) => {
+test("página inicial mostra o logo animado, as categorias e produtos", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Tirvo/);
   const logoLink = page.getByRole("banner").getByRole("link", { name: "Tirvo — página inicial" });
   await expect(logoLink).toBeVisible();
   await expect(logoLink.locator("svg.tirvo-anim")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Compre por categoria", exact: true })).toBeVisible();
   expect((await productLinks(page)).length).toBeGreaterThan(0);
 });
 
@@ -60,7 +63,7 @@ test("carrinho: adicionar abre a gaveta, a página do carrinho mostra o item e o
   const add = await openBuyableProduct(page);
   const name = (await page.getByRole("heading", { level: 1 }).innerText()).trim();
 
-  await test.step("escolhe a voltagem, quando houver", async () => {
+  await test.step("escolhe a variação (ex.: voltagem), quando houver", async () => {
     const option = page.locator('[role="radiogroup"] [role="radio"]:not([disabled])').first();
     if (await option.count()) await option.click();
   });
