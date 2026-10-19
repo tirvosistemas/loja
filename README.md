@@ -75,7 +75,7 @@ Em **Painel → Configurações**, nesta ordem:
 
 1. **Loja:** nome, **WhatsApp que recebe os pedidos** (com DDD, ex.: 41 99999-8888), telefone, e-mail, CNPJ, redes sociais e a faixa de aviso do topo. Sem WhatsApp, o checkout só oferece pagamento online.
 2. **Endereço e retirada:** endereço da loja, de onde sai o frete. Depois de salvar, use **Localizar novamente** para conferir o ponto no mapa. Defina se aceita retirada e as instruções.
-3. **Frete e entrega:** preço por km, taxa de saída, frete mínimo, adicional por item, arredondamento, distância máxima, frete grátis (valor e raio), cidades atendidas e o texto do prazo. O simulador ao lado mostra o valor para qualquer distância.
+3. **Frete e entrega:** preço por km, taxa de saída, frete mínimo, adicional por item, arredondamento, distância máxima, frete grátis (liga/desliga, até quantos km da loja e pedido mínimo: com ele ligado, todos os produtos mostram o selo e a página inicial mostra o aviso), cidades atendidas e o texto do prazo. O simulador ao lado mostra o valor para qualquer distância.
 4. **Pagamentos:** chave Pix e titular, desconto no Pix, pagamento na entrega (dinheiro, maquininha, Pix), parcelamento exibido e a opção de pagamento online.
 5. **Integrações:**
    - **Stripe:** cole a chave publicável (`pk_…`) e a secreta (`sk_…`) do [painel da Stripe](https://dashboard.stripe.com/apikeys). Crie o webhook em *Developers → Webhooks* com o endereço `https://SEU-DOMINIO/api/stripe/webhook` e os eventos `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` e `checkout.session.expired`; cole o segredo (`whsec_…`). Depois ative o pagamento online em *Pagamentos*.

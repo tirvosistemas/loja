@@ -3,6 +3,7 @@ import type { Prisma, Voltage } from "@prisma/client";
 import { db } from "./db";
 import { effectivePrice, getActivePromotions, pixPrice, type PromoInfo, type PromoLite } from "./pricing";
 import { getSettings } from "./settings";
+import { freeShippingRule } from "./shipping/free";
 import { installmentText } from "./format";
 import { VOLTAGE_LABEL, type SortValue } from "./constants";
 import { MAX_PER_LINE } from "./cart";
@@ -80,13 +81,13 @@ export type ProductDetailDTO = ProductCardDTO & {
   metaDescription: string | null;
 };
 
-type PayCfg = { pixDiscountPercent: number; installmentsMax: number; installmentsMinCents: number };
+type CardCfg = { pixDiscountPercent: number; installmentsMax: number; installmentsMinCents: number; freeShippingForAll: boolean };
 
 function maxQty(p: { trackStock: boolean; allowBackorder: boolean }, stock: number) {
   return p.trackStock && !p.allowBackorder ? Math.max(0, Math.min(stock, MAX_PER_LINE)) : MAX_PER_LINE;
 }
 
-function toCard(p: ProductRow, promos: PromoLite[], pay: PayCfg): ProductCardDTO {
+function toCard(p: ProductRow, promos: PromoLite[], cfg: CardCfg): ProductCardDTO {
   const prices = p.variants.length ? p.variants.map((v) => effectivePrice(p, v, promos)) : [effectivePrice(p, null, promos)];
   const cheapest = prices.reduce((a, b) => (b.priceCents < a.priceCents ? b : a));
   const inStock = p.variants.length
@@ -102,12 +103,12 @@ function toCard(p: ProductRow, promos: PromoLite[], pay: PayCfg): ProductCardDTO
     priceCents: cheapest.priceCents,
     compareAtCents: cheapest.compareAtCents,
     discountPercent: cheapest.discountPercent,
-    pixPriceCents: pixPrice(cheapest.priceCents, pay.pixDiscountPercent),
-    installments: installmentText(cheapest.priceCents, pay.installmentsMax, pay.installmentsMinCents),
+    pixPriceCents: pixPrice(cheapest.priceCents, cfg.pixDiscountPercent),
+    installments: installmentText(cheapest.priceCents, cfg.installmentsMax, cfg.installmentsMinCents),
     fromPrice: new Set(prices.map((x) => x.priceCents)).size > 1,
     isNew: p.isNew,
     featured: p.featured,
-    freeShipping: p.freeShipping,
+    freeShipping: p.freeShipping || cfg.freeShippingForAll,
     inStock,
     hasVariants: p.variants.length > 0,
     voltage: p.voltage && p.voltage !== "NA" ? VOLTAGE_LABEL[p.voltage] : null,
@@ -121,7 +122,9 @@ function toCard(p: ProductRow, promos: PromoLite[], pay: PayCfg): ProductCardDTO
 
 async function context() {
   const [promos, settings] = await Promise.all([getActivePromotions(), getSettings()]);
-  return { promos, pay: settings.payment as PayCfg };
+  // Com o frete grátis da loja ligado, todos os produtos levam o selo de frete grátis.
+  const cfg: CardCfg = { ...settings.payment, freeShippingForAll: !!freeShippingRule(settings.shipping) };
+  return { promos, cfg };
 }
 
 // ───────── Listagem com filtros
@@ -176,7 +179,7 @@ function searchWhere(q: string): Prisma.ProductWhereInput {
 }
 
 export async function listProducts(f: ProductFilters = {}): Promise<ProductListResult> {
-  const { promos, pay } = await context();
+  const { promos, cfg } = await context();
   const perPage = Math.min(60, Math.max(1, f.perPage ?? 24));
 
   let category: ProductListResult["category"] = null;
@@ -197,12 +200,12 @@ export async function listProducts(f: ProductFilters = {}): Promise<ProductListR
   if (f.q?.trim()) and.push(searchWhere(f.q));
   if (f.isNew) and.push({ isNew: true });
   if (f.featured) and.push({ featured: true });
-  if (f.freeShipping) and.push({ freeShipping: true });
+  if (f.freeShipping && !cfg.freeShippingForAll) and.push({ freeShipping: true });
   if (f.ids?.length) and.push({ id: { in: f.ids } });
   if (and.length) where.AND = and;
 
   const rows = await db.product.findMany({ where, include: productInclude, take: 2000 });
-  let cards = rows.map((r) => ({ row: r, card: toCard(r, promos, pay) }));
+  let cards = rows.map((r) => ({ row: r, card: toCard(r, promos, cfg) }));
 
   // Facetas a partir do conjunto antes dos filtros de marca, voltagem e preço.
   const brandCount = new Map<string, { slug: string; name: string; count: number }>();
@@ -266,8 +269,8 @@ export async function listProducts(f: ProductFilters = {}): Promise<ProductListR
 export const getProductBySlug = cache(async (slug: string): Promise<ProductDetailDTO | null> => {
   const p = await db.product.findFirst({ where: { slug, status: "ACTIVE" }, include: productInclude });
   if (!p) return null;
-  const { promos, pay } = await context();
-  const card = toCard(p, promos, pay);
+  const { promos, cfg } = await context();
+  const card = toCard(p, promos, cfg);
   const variants: VariantDTO[] = p.variants.map((v) => {
     const ep = effectivePrice(p, v, promos);
     const mq = maxQty(p, v.stock);
@@ -278,7 +281,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
       priceCents: ep.priceCents,
       compareAtCents: ep.compareAtCents,
       discountPercent: ep.discountPercent,
-      pixPriceCents: pixPrice(ep.priceCents, pay.pixDiscountPercent),
+      pixPriceCents: pixPrice(ep.priceCents, cfg.pixDiscountPercent),
       inStock: mq > 0,
       maxQuantity: mq,
     };
@@ -321,7 +324,7 @@ export function trackProductView(id: string) {
 }
 
 export async function getRelatedProducts(product: { id: string; category: { id: string } | null; brandSlug: string | null }, limit = 8) {
-  const { promos, pay } = await context();
+  const { promos, cfg } = await context();
   const rows = await db.product.findMany({
     where: {
       status: "ACTIVE",
@@ -335,23 +338,23 @@ export async function getRelatedProducts(product: { id: string; category: { id: 
     orderBy: [{ soldCount: "desc" }, { createdAt: "desc" }],
     take: limit,
   });
-  return rows.map((r) => toCard(r, promos, pay));
+  return rows.map((r) => toCard(r, promos, cfg));
 }
 
 export async function getProductsByIds(ids: string[]) {
   if (!ids.length) return [];
-  const { promos, pay } = await context();
+  const { promos, cfg } = await context();
   const rows = await db.product.findMany({ where: { id: { in: ids.slice(0, 60) }, status: "ACTIVE" }, include: productInclude });
-  const map = new Map(rows.map((r) => [r.id, toCard(r, promos, pay)]));
+  const map = new Map(rows.map((r) => [r.id, toCard(r, promos, cfg)]));
   return ids.map((id) => map.get(id)).filter((x): x is ProductCardDTO => !!x);
 }
 
 // ───────── Página inicial
 
 async function cards(where: Prisma.ProductWhereInput, orderBy: Prisma.ProductOrderByWithRelationInput[], take: number) {
-  const { promos, pay } = await context();
+  const { promos, cfg } = await context();
   const rows = await db.product.findMany({ where: { status: "ACTIVE", ...where }, include: productInclude, orderBy, take });
-  return rows.map((r) => toCard(r, promos, pay));
+  return rows.map((r) => toCard(r, promos, cfg));
 }
 
 export async function getHomeData() {
@@ -461,14 +464,14 @@ export type BannerDTO = Awaited<ReturnType<typeof getActiveBanners>>[number];
 export async function searchSuggestions(q: string, limit = 6) {
   const term = q.trim();
   if (term.length < 2) return { products: [], categories: [] };
-  const { promos, pay } = await context();
+  const { promos, cfg } = await context();
   const [rows, categories] = await Promise.all([
     db.product.findMany({ where: { status: "ACTIVE", ...searchWhere(term) }, include: productInclude, orderBy: { soldCount: "desc" }, take: limit }),
     db.category.findMany({ where: { active: true, name: { contains: term } }, select: { name: true, slug: true }, take: 4 }),
   ]);
   return {
     products: rows.map((r) => {
-      const c = toCard(r, promos, pay);
+      const c = toCard(r, promos, cfg);
       return { slug: c.slug, name: c.name, image: c.image, priceCents: c.priceCents, compareAtCents: c.compareAtCents, brand: c.brand };
     }),
     categories,

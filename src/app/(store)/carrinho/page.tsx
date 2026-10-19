@@ -26,7 +26,7 @@ export default async function CartPage() {
         description="Preços, estoque e frete conferidos em tempo real. Entrega por motoboy em Curitiba e região."
       />
       <CartView
-        freeShipping={{ enabled: shipping.enabled, aboveCents: shipping.freeShippingAboveCents, maxKm: shipping.freeShippingMaxKm }}
+        freeShipping={shipping.freeShipping}
         pickup={{ enabled: settings.pickupEnabled, place: placeLine(settings.address) }}
       />
     </div>

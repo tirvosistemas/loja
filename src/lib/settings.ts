@@ -2,6 +2,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { db } from "./db";
 import { decryptSecret, encryptSecret, maskSecret } from "./crypto";
+import { freeShippingRule } from "./shipping/free";
 
 // Configurações da loja, editadas no painel (Configurações) e guardadas na tabela Setting,
 // um registro por grupo. Cada grupo tem valores padrão, então a loja funciona antes de
@@ -34,7 +35,7 @@ export const storeSchema = z.object({
   youtube: str(""),
   businessHours: str("Seg a sex, 9h às 18h · Sáb, 9h às 13h"),
   announcementEnabled: z.boolean().default(true),
-  announcementText: str("Entrega por motoboy em Curitiba e região · Frete grátis acima de R$ 999"),
+  announcementText: str("Entrega rápida por motoboy em Curitiba e região metropolitana"),
   announcementHref: str("/ofertas"),
 });
 
@@ -60,7 +61,10 @@ export const shippingSchema = z.object({
   minFeeCents: cents(1000),
   extraPerItemCents: cents(0), // por unidade a partir da 2ª
   maxDistanceKm: z.number().min(0).default(60),
-  freeShippingAboveCents: nullableCents(99900),
+  // Frete grátis da loja, para todos os produtos: até freeShippingMaxKm da loja (null = toda a
+  // área de entrega) e a partir de freeShippingAboveCents em produtos (null ou 0 = sem mínimo).
+  freeShippingEnabled: z.boolean().default(false),
+  freeShippingAboveCents: nullableCents(2000),
   freeShippingMaxKm: z.number().min(0).nullable().default(30),
   roundToCents: cents(50), // arredonda para cima: 50 = de R$ 0,50 em R$ 0,50
   distanceMode: z.enum(["route", "straight"]).default("route"),
@@ -264,8 +268,7 @@ export async function getPublicSettings() {
     pickupInstructions: s.address.pickupInstructions,
     shipping: {
       enabled: s.shipping.enabled,
-      freeShippingAboveCents: s.shipping.freeShippingAboveCents,
-      freeShippingMaxKm: s.shipping.freeShippingMaxKm,
+      freeShipping: freeShippingRule(s.shipping),
       maxDistanceKm: s.shipping.maxDistanceKm,
       etaText: s.shipping.etaText,
       allowedCities: s.shipping.restrictToAllowedCities ? s.shipping.allowedCities : null,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { computeShippingFee } from "@/lib/shipping/quote";
+import { freeShippingRule, freeShippingSentence } from "@/lib/shipping/free";
 import { shippingSchema, type ShippingSettings } from "@/lib/settings";
 
-// Frete por motoboy: taxa de saída + km × preço, mínimo, arredondamento, raio e frete grátis.
+// Frete por motoboy: taxa de saída + km × preço, mínimo, arredondamento, raio e frete grátis da
+// loja (até um raio em km, a partir de um pedido mínimo).
 
 const cfg = (patch: Partial<ShippingSettings> = {}): ShippingSettings => ({
   ...shippingSchema.parse({}),
@@ -12,6 +14,7 @@ const cfg = (patch: Partial<ShippingSettings> = {}): ShippingSettings => ({
   extraPerItemCents: 0,
   roundToCents: 50,
   maxDistanceKm: 60,
+  freeShippingEnabled: true,
   freeShippingAboveCents: 99900,
   freeShippingMaxKm: 30,
   ...patch,
@@ -91,10 +94,30 @@ describe("computeShippingFee", () => {
     expect(computeShippingFee(cfg({ freeShippingMaxKm: null }), { distanceKm: 50, subtotalCents: 150000 }).free).toBe(true);
   });
 
-  it("sem valor de frete grátis configurado, nunca é grátis por valor", () => {
-    const r = computeShippingFee(cfg({ freeShippingAboveCents: null }), { distanceKm: 5, subtotalCents: 999999 });
+  it("com o frete grátis desligado no painel, nunca é grátis pela regra da loja", () => {
+    const r = computeShippingFee(cfg({ freeShippingEnabled: false }), { distanceKm: 5, subtotalCents: 999999 });
     expect(r.free).toBe(false);
     expect(r.missingForFreeCents).toBeUndefined();
+  });
+
+  it("até 30 km com pedido mínimo de R$ 20", () => {
+    const c = cfg({ freeShippingAboveCents: 2000, freeShippingMaxKm: 30 });
+    const short = computeShippingFee(c, { distanceKm: 28, subtotalCents: 1000 });
+    expect(short.free).toBe(false);
+    expect(short.feeCents).toBe(500 + 28 * 250);
+    expect(short.missingForFreeCents).toBe(1000);
+    expect(computeShippingFee(c, { distanceKm: 28, subtotalCents: 2000 }).free).toBe(true);
+    expect(computeShippingFee(c, { distanceKm: 30, subtotalCents: 2000 }).free).toBe(true);
+    const far = computeShippingFee(c, { distanceKm: 30.1, subtotalCents: 50000 });
+    expect(far.free).toBe(false);
+    expect(far.missingForFreeCents).toBeUndefined();
+  });
+
+  it("sem pedido mínimo, qualquer pedido dentro do raio sai grátis", () => {
+    const c = cfg({ freeShippingAboveCents: null });
+    expect(computeShippingFee(c, { distanceKm: 28, subtotalCents: 1000 }).free).toBe(true);
+    expect(computeShippingFee(cfg({ freeShippingAboveCents: 0 }), { distanceKm: 28, subtotalCents: 1000 }).free).toBe(true);
+    expect(computeShippingFee(c, { distanceKm: 31, subtotalCents: 1000 }).free).toBe(false);
   });
 
   it("cupom de frete grátis vale mesmo fora do raio", () => {
@@ -113,5 +136,22 @@ describe("computeShippingFee", () => {
 
   it("a distância máxima vale mesmo com cupom de frete grátis", () => {
     expect(computeShippingFee(cfg(), { distanceKm: 70, freeShippingCoupon: true }).available).toBe(false);
+  });
+});
+
+describe("frete grátis da loja (regra e textos)", () => {
+  const rule = (patch: Partial<ShippingSettings> = {}) => freeShippingRule(cfg(patch));
+
+  it("só vale com o frete grátis e a entrega ligados", () => {
+    expect(rule({ freeShippingEnabled: false })).toBeNull();
+    expect(rule({ enabled: false })).toBeNull();
+    expect(rule({ freeShippingAboveCents: 2000, freeShippingMaxKm: 30 })).toEqual({ minCents: 2000, maxKm: 30 });
+    expect(rule({ freeShippingAboveCents: null, freeShippingMaxKm: null })).toEqual({ minCents: 0, maxKm: null });
+  });
+
+  it("monta o texto com o raio e o pedido mínimo configurados", () => {
+    expect(freeShippingSentence({ minCents: 2000, maxKm: 30 })).toBe("Frete grátis até 30 km da loja, com pedido mínimo de R$ 20.");
+    expect(freeShippingSentence({ minCents: 2990, maxKm: 7.5 })).toBe("Frete grátis até 7,5 km da loja, com pedido mínimo de R$ 29,90.");
+    expect(freeShippingSentence({ minCents: 0, maxKm: null })).toBe("Frete grátis em toda a área de entrega.");
   });
 });

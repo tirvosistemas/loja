@@ -153,7 +153,7 @@ export function InfoSection({
           checked={v.freeShipping}
           onChange={(on) => set("freeShipping", on)}
           label="Frete grátis"
-          description="A entrega sai grátis quando o carrinho só tem produtos com frete grátis (dentro da área de entrega)."
+          description="A entrega sai grátis quando o carrinho só tem produtos com frete grátis (dentro da área de entrega). Com o frete grátis da loja ligado em Configurações → Frete, todos os produtos já mostram o selo."
         />
       </div>
 

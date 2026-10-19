@@ -5,12 +5,14 @@ import { motion } from "motion/react";
 import { Loader2, Truck } from "lucide-react";
 import type { CartQuoteResponse } from "@/lib/orders/quote";
 import { formatBRL, formatKm } from "@/lib/format";
+import { freeShippingWhere, type FreeShippingRule } from "@/lib/shipping/free";
 import { cn } from "@/lib/utils";
 
 // Linhas do resumo (subtotal, cupom, Pix, frete, total) e a barra de frete grátis.
 // Os valores vêm sempre da cotação do servidor.
 
-export type FreeShippingCfg = { enabled: boolean; aboveCents: number | null; maxKm: number | null };
+/** Frete grátis da loja em vigor (null = desligado). */
+export type FreeShippingCfg = FreeShippingRule | null;
 
 function Row({ label, value, className, hint }: { label: ReactNode; value: ReactNode; className?: string; hint?: ReactNode }) {
   return (
@@ -119,7 +121,7 @@ export function SummaryRows({
   );
 }
 
-/** Barra de progresso até o frete grátis. */
+/** Barra de progresso até o pedido mínimo do frete grátis (sem mínimo, só o aviso). */
 export function FreeShippingProgress({
   cfg,
   quote,
@@ -131,14 +133,15 @@ export function FreeShippingProgress({
   subtotalCents: number;
   className?: string;
 }) {
-  if (!cfg.enabled || cfg.aboveCents == null || cfg.aboveCents <= 0) return null;
+  if (!cfg) return null;
   const ship = quote?.shipping;
   const known = !!ship && ship.ok && ship.available;
   const outsideRadius = known && cfg.maxKm != null && ship!.distanceKm > cfg.maxKm && !ship!.free;
-  const won = known ? ship!.free : subtotalCents >= cfg.aboveCents;
-  const missing = Math.max(0, cfg.aboveCents - subtotalCents);
-  const pct = won ? 100 : Math.min(100, Math.round((subtotalCents / cfg.aboveCents) * 100));
-  const where = cfg.maxKm ? `até ${cfg.maxKm.toLocaleString("pt-BR")} km da loja` : "em Curitiba e região";
+  const won = known ? ship!.free : subtotalCents >= cfg.minCents;
+  const missing = Math.max(0, cfg.minCents - subtotalCents);
+  if (!won && !missing && !outsideRadius) return null;
+  const pct = won ? 100 : Math.min(100, Math.round((subtotalCents / cfg.minCents) * 100));
+  const where = freeShippingWhere(cfg);
 
   if (outsideRadius) {
     return (
@@ -168,21 +171,23 @@ export function FreeShippingProgress({
           </span>
         )}
       </p>
-      <div
-        role="progressbar"
-        aria-label="Progresso para o frete grátis"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted"
-      >
-        <motion.div
-          className={cn("h-full rounded-full", won ? "bg-success" : "bg-primary")}
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ type: "spring", stiffness: 200, damping: 30 }}
-        />
-      </div>
+      {cfg.minCents > 0 && (
+        <div
+          role="progressbar"
+          aria-label="Progresso para o frete grátis"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted"
+        >
+          <motion.div
+            className={cn("h-full rounded-full", won ? "bg-success" : "bg-primary")}
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: "spring", stiffness: 200, damping: 30 }}
+          />
+        </div>
+      )}
     </div>
   );
 }

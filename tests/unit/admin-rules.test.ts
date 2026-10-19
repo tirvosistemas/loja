@@ -121,6 +121,7 @@ describe("feeBreakdown (simulador de frete do painel)", () => {
         minFeeCents: rnd(3000),
         extraPerItemCents: rnd(800),
         maxDistanceKm: rnd(4) === 0 ? 0 : 5 + rnd(60),
+        freeShippingEnabled: rnd(4) !== 0,
         freeShippingAboveCents: rnd(3) === 0 ? null : rnd(300_000),
         freeShippingMaxKm: rnd(3) === 0 ? null : rnd(40),
         roundToCents: [1, 10, 50, 100][rnd(4)],

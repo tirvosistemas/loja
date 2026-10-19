@@ -156,7 +156,7 @@ export function ProductView({
               <BuyBox storeWhatsapp={settings.store.whatsapp} productUrl={absoluteUrl(`/produto/${product.slug}`)} />
               <ShippingEstimator
                 pickup={{ enabled: settings.pickupEnabled, place: pickupPlace, instructions: settings.pickupInstructions }}
-                freeShippingAboveCents={settings.shipping.enabled ? settings.shipping.freeShippingAboveCents : null}
+                freeShipping={settings.shipping.freeShipping}
               />
               <TrustRow warrantyMonths={product.warrantyMonths} methods={settings.payment.methods} etaText={settings.shipping.etaText} />
             </div>

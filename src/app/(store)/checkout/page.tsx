@@ -38,7 +38,7 @@ export default async function CheckoutPage() {
             deliveryEnabled: s.shipping.enabled,
             pickupEnabled: s.pickupEnabled,
             pickup: { place, instructions: s.pickupInstructions, hours: s.store.businessHours },
-            freeShipping: { enabled: s.shipping.enabled, aboveCents: s.shipping.freeShippingAboveCents, maxKm: s.shipping.freeShippingMaxKm },
+            freeShipping: s.shipping.freeShipping,
             hasWhatsapp: onlyDigits(s.store.whatsapp).length >= 10,
           }}
         />

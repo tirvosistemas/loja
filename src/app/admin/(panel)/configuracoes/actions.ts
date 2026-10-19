@@ -207,6 +207,7 @@ const shippingInput = z
     minFeeCents: money,
     extraPerItemCents: money,
     maxDistanceKm: km(500),
+    freeShippingEnabled: z.boolean(),
     freeShippingAboveCents: money.nullable(),
     freeShippingMaxKm: km(500).nullable(),
     roundToCents: z.union([z.literal(1), z.literal(10), z.literal(50), z.literal(100)]),
@@ -227,7 +228,8 @@ const shippingInput = z
       }),
     etaText: text(120),
   })
-  .refine((v) => !v.restrictToAllowedCities || v.allowedCities.length > 0, { path: ["allowedCities"], message: "Marque pelo menos uma cidade atendida." });
+  .refine((v) => !v.restrictToAllowedCities || v.allowedCities.length > 0, { path: ["allowedCities"], message: "Marque pelo menos uma cidade atendida." })
+  .refine((v) => !v.freeShippingEnabled || v.freeShippingMaxKm !== 0, { path: ["freeShippingMaxKm"], message: "Use mais de 0 km ou deixe em branco para toda a área de entrega." });
 
 export type ShippingInput = z.input<typeof shippingInput>;
 

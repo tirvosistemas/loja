@@ -65,7 +65,7 @@ Se algo não ficou claro, fale com a gente pelo WhatsApp antes de finalizar. Pre
 O frete é calculado **por quilômetro**, pela distância de rota entre a nossa loja e o seu endereço. O valor aparece na hora, no carrinho e no checkout, assim que você informa o CEP e o número.
 
 - Há uma taxa fixa de saída mais um valor por quilômetro rodado.
-- Pedidos acima do valor de frete grátis, informado no site, não pagam entrega dentro do raio indicado.
+- Quando o frete grátis está ativo, pedidos a partir do valor mínimo não pagam entrega dentro da distância indicada no site.
 - Alguns produtos têm **frete grátis** sempre, sinalizado na página do produto.
 - Cupons de frete grátis zeram a entrega quando as regras do cupom são atendidas.
 
@@ -210,7 +210,7 @@ Entregamos em Curitiba e nas cidades da região metropolitana, como São José d
 
 ## Como é calculado o frete?
 
-Pela distância de rota entre a loja e o seu endereço: uma taxa de saída mais um valor por quilômetro. Acima do valor de frete grátis, a entrega é por nossa conta dentro do raio informado no site.
+Pela distância de rota entre a loja e o seu endereço: uma taxa de saída mais um valor por quilômetro. Quando o frete grátis está ativo, a entrega é por nossa conta dentro da distância e a partir do pedido mínimo informados no site.
 
 ## Em quanto tempo recebo?
 

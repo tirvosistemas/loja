@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { Bike, ExternalLink, Loader2, MapPin, Store, Truck } from "lucide-react";
 import { formatBRL, formatCep, formatKm } from "@/lib/format";
+import { freeShippingSentence, type FreeShippingRule } from "@/lib/shipping/free";
 import { onlyDigits, cn } from "@/lib/utils";
 import { useCart } from "@/stores/cart";
 import { usePurchase } from "./purchase-context";
@@ -25,10 +26,10 @@ type Quote = {
 
 export function ShippingEstimator({
   pickup,
-  freeShippingAboveCents,
+  freeShipping,
 }: {
   pickup: { enabled: boolean; place: string | null; instructions: string };
-  freeShippingAboveCents: number | null;
+  freeShipping: FreeShippingRule | null;
 }) {
   const { product, variant, quantity } = usePurchase();
   const id = useId();
@@ -130,6 +131,12 @@ export function ShippingEstimator({
         </a>
       </div>
 
+      {freeShipping && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl bg-success-soft px-3 py-2.5 text-[13px] font-medium leading-snug text-success">
+          <Truck className="mt-px size-4 shrink-0" aria-hidden /> {freeShippingSentence(freeShipping)}
+        </p>
+      )}
+
       <form onSubmit={submit} className="mt-3 flex gap-2" noValidate>
         <div className="min-w-0 flex-[1.4]">
           <label htmlFor={`${id}-cep`} className="sr-only">
@@ -186,7 +193,6 @@ export function ShippingEstimator({
       {!quote && !error && (
         <p className="mt-3 text-[13px] leading-relaxed text-subtle">
           Entregamos por motoboy em Curitiba e região metropolitana.
-          {freeShippingAboveCents != null && freeShippingAboveCents > 0 && ` Frete grátis acima de ${formatBRL(freeShippingAboveCents)}.`}
         </p>
       )}
 

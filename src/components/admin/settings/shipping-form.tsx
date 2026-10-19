@@ -8,6 +8,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Checkbox, Switch } from "@/components/ui/switch";
 import { Segmented } from "@/components/ui/tabs";
 import { saveShippingSettings, type ShippingInput } from "@/app/admin/(panel)/configuracoes/actions";
+import { freeShippingRule, freeShippingSentence } from "@/lib/shipping/free";
 import { Callout, Eyebrow, NumberInput, SaveBar, Section, SettingsField, useSettingsForm } from "./form-kit";
 import { ShippingReferenceTable, ShippingSimulator } from "./shipping-simulator";
 
@@ -35,6 +36,7 @@ export function ShippingForm({ initial, rmcCities, originReady }: { initial: Shi
   const f = useSettingsForm<ShippingFormValues>(initial, saveShippingSettings);
   const { values: v, set, errors: e } = f;
   const [customCity, setCustomCity] = useState("");
+  const freeRule = freeShippingRule({ ...v, enabled: true });
 
   const selected = new Set(v.allowedCities.map(norm));
   const custom = v.allowedCities.filter((c) => !rmcCities.some((r) => norm(r) === norm(c)));
@@ -128,26 +130,40 @@ export function ShippingForm({ initial, rmcCities, originReady }: { initial: Shi
           </div>
         </Section>
 
-        <Section title="Frete grátis" description="Incentive pedidos maiores. O cupom de frete grátis e os produtos com frete grátis valem sempre.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SettingsField name="freeShippingAboveCents" label="Frete grátis acima de" htmlFor="sh-free" error={e.freeShippingAboveCents} hint="Deixe em branco para não oferecer.">
-              <MoneyInput id="sh-free" allowEmpty placeholder="Sem frete grátis" value={v.freeShippingAboveCents} onChange={(c) => set("freeShippingAboveCents", c)} aria-invalid={!!e.freeShippingAboveCents} />
-            </SettingsField>
-            <SettingsField name="freeShippingMaxKm" label="Frete grátis só até" htmlFor="sh-free-km" error={e.freeShippingMaxKm} hint="Em branco: vale para qualquer distância atendida.">
-              <NumberInput
-                id="sh-free-km"
-                allowEmpty
-                value={v.freeShippingMaxKm}
-                min={0}
-                max={500}
-                step={0.5}
-                suffix="km"
-                placeholder="Sem limite"
-                onChange={(n) => set("freeShippingMaxKm", n)}
-                aria-invalid={!!e.freeShippingMaxKm}
-              />
-            </SettingsField>
-          </div>
+        <Section title="Frete grátis" description="Para todos os produtos, até uma distância da loja e a partir de um pedido mínimo. O cupom de frete grátis e os produtos com frete grátis próprio valem sempre.">
+          <Switch
+            checked={v.freeShippingEnabled}
+            onChange={(c) => set("freeShippingEnabled", c)}
+            label="Oferecer frete grátis"
+            description={v.freeShippingEnabled ? "Todos os produtos mostram o selo Frete grátis e a página inicial mostra o aviso." : "Desligado: o frete é sempre cobrado pela distância."}
+          />
+          {freeRule && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SettingsField name="freeShippingMaxKm" label="Até quantos km da loja" htmlFor="sh-free-km" error={e.freeShippingMaxKm} hint="Em branco: toda a área de entrega.">
+                  <NumberInput
+                    id="sh-free-km"
+                    allowEmpty
+                    value={v.freeShippingMaxKm}
+                    min={0}
+                    max={500}
+                    step={0.5}
+                    suffix="km"
+                    placeholder="Toda a área"
+                    onChange={(n) => set("freeShippingMaxKm", n)}
+                    aria-invalid={!!e.freeShippingMaxKm}
+                  />
+                </SettingsField>
+                <SettingsField name="freeShippingAboveCents" label="Pedido mínimo" htmlFor="sh-free" error={e.freeShippingAboveCents} hint="Soma dos produtos. Em branco: sem mínimo.">
+                  <MoneyInput id="sh-free" allowEmpty placeholder="Sem mínimo" value={v.freeShippingAboveCents} onChange={(c) => set("freeShippingAboveCents", c)} aria-invalid={!!e.freeShippingAboveCents} />
+                </SettingsField>
+              </div>
+              <Callout title="Na loja aparece">
+                {freeShippingSentence(freeRule)}
+                {!v.enabled && " A entrega está desligada: o aviso só aparece com a entrega ativa."}
+              </Callout>
+            </>
+          )}
         </Section>
 
         <Section title="Cidades atendidas" description="Curitiba e região metropolitana. Endereços fora da lista não podem pedir entrega.">

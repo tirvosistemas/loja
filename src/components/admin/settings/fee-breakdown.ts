@@ -2,12 +2,15 @@
 // Segue exatamente a conta de computeShippingFee (src/lib/shipping/quote.ts), mas sem
 // importar aquele módulo, que depende do banco e não pode ir para o navegador.
 
+import { freeShippingRule } from "@/lib/shipping/free";
+
 export type FeeConfig = {
   pricePerKmCents: number;
   baseFeeCents: number;
   minFeeCents: number;
   extraPerItemCents: number;
   maxDistanceKm: number;
+  freeShippingEnabled: boolean;
   freeShippingAboveCents: number | null;
   freeShippingMaxKm: number | null;
   roundToCents: number;
@@ -25,7 +28,7 @@ export type FeeBreakdown = {
   afterMinCents: number;
   roundedCents: number;
   roundingApplied: boolean;
-  /** Frete grátis por valor do pedido (limite e raio). */
+  /** Frete grátis da loja (pedido mínimo e raio). */
   freeByThreshold: boolean;
   /** Grátis bloqueado só porque passou do raio do frete grátis. */
   outsideFreeRadius: boolean;
@@ -44,8 +47,9 @@ export function feeBreakdown(cfg: FeeConfig, input: { distanceKm: number; itemCo
   const afterMinCents = Math.max(rawCents, cfg.minFeeCents);
   const roundedCents = cfg.roundToCents > 1 ? Math.ceil(afterMinCents / cfg.roundToCents) * cfg.roundToCents : afterMinCents;
   const subtotal = input.subtotalCents ?? 0;
-  const withinFreeRadius = cfg.freeShippingMaxKm == null || km <= cfg.freeShippingMaxKm;
-  const reachesThreshold = cfg.freeShippingAboveCents != null && subtotal >= cfg.freeShippingAboveCents;
+  const rule = freeShippingRule(cfg);
+  const withinFreeRadius = !!rule && (rule.maxKm == null || km <= rule.maxKm);
+  const reachesThreshold = !!rule && subtotal >= rule.minCents;
   const freeByThreshold = available && reachesThreshold && withinFreeRadius;
   return {
     km,

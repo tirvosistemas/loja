@@ -2,12 +2,13 @@ import { db } from "../db";
 import { lookupCep } from "../cep";
 import { getSettings, saveSettingsGroup, type Settings, type ShippingSettings } from "../settings";
 import { onlyDigits } from "../utils";
+import { freeShippingRule } from "./free";
 import { haversineKm, normalizeCity, type LatLng } from "./geo";
 import { geocodeWith, routeMetersWith, type AddressQuery, type MapsProvider } from "./providers";
 
 // Frete por motoboy: sai do endereço da loja (Configurações → Endereço) até o endereço do
 // cliente. Preço = taxa de saída + km × preço por km (+ adicional por item), com mínimo,
-// arredondamento, raio máximo e frete grátis por valor de pedido.
+// arredondamento, raio máximo e frete grátis da loja (até um raio em km, com pedido mínimo).
 
 export type FeeInput = {
   distanceKm: number;
@@ -46,16 +47,14 @@ export function computeShippingFee(cfg: ShippingSettings, input: FeeInput): FeeR
   if (cfg.roundToCents > 1) fee = Math.ceil(fee / cfg.roundToCents) * cfg.roundToCents;
 
   const subtotal = input.subtotalCents ?? 0;
-  const withinFreeRadius = cfg.freeShippingMaxKm == null || km <= cfg.freeShippingMaxKm;
+  const rule = freeShippingRule(cfg);
+  const withinFreeRadius = !!rule && (rule.maxKm == null || km <= rule.maxKm);
   let freeReason: FeeResult["freeReason"];
   if (input.freeShippingCoupon) freeReason = "coupon";
   else if (input.allItemsFreeShipping) freeReason = "product";
-  else if (cfg.freeShippingAboveCents != null && subtotal >= cfg.freeShippingAboveCents && withinFreeRadius) freeReason = "threshold";
+  else if (rule && withinFreeRadius && subtotal >= rule.minCents) freeReason = "threshold";
 
-  const missing =
-    !freeReason && cfg.freeShippingAboveCents != null && withinFreeRadius && subtotal < cfg.freeShippingAboveCents
-      ? cfg.freeShippingAboveCents - subtotal
-      : undefined;
+  const missing = !freeReason && rule && withinFreeRadius && subtotal < rule.minCents ? rule.minCents - subtotal : undefined;
 
   return {
     available: true,

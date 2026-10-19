@@ -5,8 +5,8 @@ import { priceCart } from "@/lib/cart";
 import { cartItemSchema } from "@/lib/validators";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-// Cotação de frete por motoboy. Pode receber os itens do carrinho para considerar frete
-// grátis por valor e o adicional por item.
+// Cotação de frete por motoboy. Pode receber os itens do carrinho para considerar o pedido
+// mínimo do frete grátis e o adicional por item.
 const bodySchema = z.object({
   cep: z.string().min(8).max(9),
   number: z.string().max(20).optional(),

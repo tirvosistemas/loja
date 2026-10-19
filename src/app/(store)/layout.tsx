@@ -41,9 +41,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <Footer settings={settings} categories={categories} pages={footerPages} />
       <MobileTabBar />
 
-      <CartDrawer
-        freeShipping={{ enabled: shipping.enabled, aboveCents: shipping.freeShippingAboveCents, maxKm: shipping.freeShippingMaxKm }}
-      />
+      <CartDrawer freeShipping={shipping.freeShipping} />
       <WhatsAppFloat phone={store.whatsapp} />
       <CookieConsent />
       <DeferredPushPrompt vapidPublicKey={vapidPublicKey} delaySeconds={push.promptDelaySeconds} enabled={push.promptEnabled} />

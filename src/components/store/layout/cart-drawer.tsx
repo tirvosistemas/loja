@@ -4,55 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 import { cartSubtotal, useCart, type CartItem } from "@/stores/cart";
 import { Sheet } from "@/components/ui/dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { SmartImage } from "@/components/ui/smart-image";
 import { QuantityStepper } from "@/components/ui/quantity";
 import { formatBRL } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { FreeShippingProgress, type FreeShippingCfg } from "@/components/store/cart/summary";
 import { useCartCount } from "./header-actions";
-
-type FreeShipping = { enabled: boolean; aboveCents: number | null; maxKm: number | null };
-
-function FreeShippingProgress({ subtotalCents, cfg }: { subtotalCents: number; cfg: FreeShipping }) {
-  if (!cfg.enabled || cfg.aboveCents == null || cfg.aboveCents <= 0) return null;
-  const missing = Math.max(0, cfg.aboveCents - subtotalCents);
-  const pct = Math.min(100, Math.round((subtotalCents / cfg.aboveCents) * 100));
-  const where = `em Curitiba e região${cfg.maxKm ? ` (até ${cfg.maxKm.toLocaleString("pt-BR")} km da loja)` : ""}`;
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3.5">
-      <p className="flex items-start gap-2 text-sm">
-        <Truck className={cn("mt-0.5 size-4 shrink-0", missing === 0 ? "text-success" : "text-primary")} aria-hidden />
-        {missing > 0 ? (
-          <span>
-            Faltam <b className="tabular">{formatBRL(missing)}</b> para frete grátis <span className="text-muted-foreground">{where}</span>
-          </span>
-        ) : (
-          <span>
-            <b className="text-success">Você ganhou frete grátis</b> <span className="text-muted-foreground">{where}</span>
-          </span>
-        )}
-      </p>
-      <div
-        role="progressbar"
-        aria-label="Progresso para o frete grátis"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted"
-      >
-        <motion.div
-          className={cn("h-full rounded-full", missing === 0 ? "bg-success" : "bg-primary")}
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ type: "spring", stiffness: 200, damping: 30 }}
-        />
-      </div>
-    </div>
-  );
-}
 
 function CartLine({ item }: { item: CartItem }) {
   const setQuantity = useCart((s) => s.setQuantity);
@@ -110,7 +70,7 @@ function CartLine({ item }: { item: CartItem }) {
 }
 
 /** Carrinho lateral, aberto por qualquer botão de carrinho da loja. */
-export function CartDrawer({ freeShipping }: { freeShipping: FreeShipping }) {
+export function CartDrawer({ freeShipping }: { freeShipping: FreeShippingCfg }) {
   const open = useCart((s) => s.drawerOpen);
   const close = useCart((s) => s.closeDrawer);
   const items = useCart((s) => s.items);
@@ -167,7 +127,7 @@ export function CartDrawer({ freeShipping }: { freeShipping: FreeShipping }) {
         </div>
       ) : (
         <div className="px-5 pt-4">
-          <FreeShippingProgress subtotalCents={subtotal} cfg={freeShipping} />
+          <FreeShippingProgress cfg={freeShipping} quote={null} subtotalCents={subtotal} />
           <ul className="divide-y divide-border">
             <AnimatePresence initial={false}>
               {items.map((it) => (

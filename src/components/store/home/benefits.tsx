@@ -1,6 +1,6 @@
 import { Bike, Calculator, ShieldCheck, Wallet } from "lucide-react";
 import type { PublicSettings } from "@/lib/settings";
-import { formatBRL } from "@/lib/format";
+import { freeShippingSentence } from "@/lib/shipping/free";
 
 /** Faixa com os 4 diferenciais da loja (textos complementares vêm das configurações). */
 export function Benefits({ settings }: { settings: PublicSettings }) {
@@ -18,10 +18,7 @@ export function Benefits({ settings }: { settings: PublicSettings }) {
     {
       icon: Calculator,
       title: "Frete calculado na hora pelo CEP",
-      text:
-        shipping.freeShippingAboveCents != null && shipping.freeShippingAboveCents > 0
-          ? `Frete grátis acima de ${formatBRL(shipping.freeShippingAboveCents)}.`
-          : "Preço por distância, sem surpresa no final.",
+      text: shipping.freeShipping ? freeShippingSentence(shipping.freeShipping) : "Preço por distância, sem surpresa no final.",
     },
     {
       icon: Wallet,

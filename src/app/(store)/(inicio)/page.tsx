@@ -5,6 +5,7 @@ import { ProductRail } from "@/components/store/product-rail";
 import { HeroCarousel } from "@/components/store/home/hero-carousel";
 import { FallbackHero } from "@/components/store/home/fallback-hero";
 import { Benefits } from "@/components/store/home/benefits";
+import { FreeShippingBanner } from "@/components/store/home/free-shipping-banner";
 import { CategoryGrid } from "@/components/store/home/category-grid";
 import { FlashDeals } from "@/components/store/home/flash-deals";
 import { StripBanners } from "@/components/store/home/strip-banners";
@@ -100,6 +101,7 @@ export default async function HomePage() {
               cities={shipping.allowedCities?.length ?? null}
             />
           )}
+          {shipping.freeShipping && <FreeShippingBanner rule={shipping.freeShipping} />}
           <Benefits settings={settings} />
         </div>
 

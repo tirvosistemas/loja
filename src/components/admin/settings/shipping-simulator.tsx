@@ -8,6 +8,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { formatBRL, formatKm } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { simulateShippingAction, type ShippingInput, type SimulationResult } from "@/app/admin/(panel)/configuracoes/actions";
+import { freeShippingRule } from "@/lib/shipping/free";
 import { feeBreakdown } from "./fee-breakdown";
 import { Callout, Eyebrow, NumberInput, maskCep } from "./form-kit";
 
@@ -172,10 +173,12 @@ export function ShippingReferenceTable({ draft }: { draft: ShippingInput }) {
     minFeeCents: draft.minFeeCents,
     extraPerItemCents: draft.extraPerItemCents,
     maxDistanceKm: draft.maxDistanceKm,
+    freeShippingEnabled: draft.freeShippingEnabled,
     freeShippingAboveCents: draft.freeShippingAboveCents ?? null,
     freeShippingMaxKm: draft.freeShippingMaxKm ?? null,
     roundToCents: draft.roundToCents,
   };
+  const rule = freeShippingRule(cfg);
   return (
     <div>
       <Eyebrow className="mb-2.5">Referência · 1 item</Eyebrow>
@@ -188,9 +191,9 @@ export function ShippingReferenceTable({ draft }: { draft: ShippingInput }) {
             <th scope="col" className="py-2 text-right font-medium">
               Frete
             </th>
-            {cfg.freeShippingAboveCents != null && (
+            {rule && (
               <th scope="col" className="py-2 text-right font-medium">
-                Acima de {formatBRL(cfg.freeShippingAboveCents)}
+                {rule.minCents > 0 ? `Pedido de ${formatBRL(rule.minCents)}` : "Frete grátis"}
               </th>
             )}
           </tr>
@@ -198,12 +201,12 @@ export function ShippingReferenceTable({ draft }: { draft: ShippingInput }) {
         <tbody className="tabular">
           {REFERENCE_KM.map((km) => {
             const b = feeBreakdown(cfg, { distanceKm: km, itemCount: 1, subtotalCents: 0 });
-            const free = cfg.freeShippingAboveCents != null && feeBreakdown(cfg, { distanceKm: km, itemCount: 1, subtotalCents: cfg.freeShippingAboveCents }).freeByThreshold;
+            const free = !!rule && feeBreakdown(cfg, { distanceKm: km, itemCount: 1, subtotalCents: rule.minCents }).freeByThreshold;
             return (
               <tr key={km} className="border-b border-border last:border-0">
                 <td className="py-2">{formatKm(km)}</td>
                 <td className="py-2 text-right font-medium">{b.available ? formatBRL(b.finalCents) : <span className="text-subtle">fora do raio</span>}</td>
-                {cfg.freeShippingAboveCents != null && (
+                {rule && (
                   <td className="py-2 text-right">{!b.available ? "—" : free ? <span className="text-success">grátis</span> : <span className="text-subtle">{formatBRL(b.finalCents)}</span>}</td>
                 )}
               </tr>
