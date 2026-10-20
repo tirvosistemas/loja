@@ -88,7 +88,7 @@ export const AI_PROVIDERS: AiProviderInfo[] = [
     id: "openrouter",
     name: "OpenRouter",
     tag: "Vários modelos, alguns grátis",
-    text: "Uma chave só para centenas de modelos (Gemini, GPT, Claude, Llama, Qwen…), inclusive gratuitos. Informe o modelo, ex.: google/gemini-flash-latest.",
+    text: "Uma chave só para centenas de modelos (Gemini, GPT, Claude, Llama, Qwen…), inclusive gratuitos. Informe o modelo, ex.: google/gemini-3.5-flash.",
     keyField: "openrouterKey",
     keyHint: "Começa com sk-or-.",
     keyUrl: "https://openrouter.ai/settings/keys",
@@ -114,14 +114,25 @@ export function aiProvider(id: AiProviderId): AiProviderInfo {
 
 const SKIP = /(embed|tts|audio|realtime|transcri|whisper|image|imagine|dall|moderation|search|computer|codex|live|guard|ocr|speech|veo|lyria|robotics|learnlm|gemma|aqa)/i;
 
-/** Número de versão para ordenar (gemini-3.5-flash → 3.5; gpt-5.4-mini → 5.4). */
+/**
+ * Partes da versão para ordenar (gemini-3.5-flash → [3, 5]; claude-sonnet-5-5 → [5, 5];
+ * grok-4-0709 → [4]). Data no fim e sufixos longos não contam como versão.
+ */
 function version(id: string) {
-  const m = id.match(/(\d+(?:\.\d+)?)/);
-  return m ? Number(m[1]) : 0;
+  const m = id.replace(/-\d{8}$/, "").match(/\d+(?:[.-]\d{1,2}(?!\d))*/);
+  return m ? m[0].split(/[.-]/).map(Number) : [];
+}
+
+function compareVersions(a: number[], b: number[]) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d) return d;
+  }
+  return 0;
 }
 
 function newest(ids: string[]) {
-  return [...ids].sort((a, b) => version(b) - version(a) || a.length - b.length)[0];
+  return [...ids].sort((a, b) => compareVersions(version(b), version(a)) || a.length - b.length)[0];
 }
 
 /**
