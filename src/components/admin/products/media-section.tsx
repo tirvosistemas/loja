@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { pluralize } from "@/lib/format";
 import { standardizeImagesAction } from "@/app/admin/(panel)/produtos/tools-actions";
-import { ImageGallery } from "@/components/admin/image-uploader";
+import { ImageGallery, type GalleryImage } from "@/components/admin/image-uploader";
+import type { StdImage } from "@/lib/admin/standardize";
 import { MAX_PRODUCT_IMAGES } from "@/lib/admin/product-schema";
 import { FormField, FormSection, type FormApi } from "./form-kit";
 
@@ -17,6 +18,15 @@ const TIPS = [
   `Até ${MAX_PRODUCT_IMAGES} fotos. A primeira é a capa; arraste para mudar a ordem.`,
   "Mostre detalhes: painel, prateleiras, gavetas, etiqueta de energia.",
 ];
+
+/** Aplica o resultado na lista atual pelo endereço enviado: fotos enviadas, apagadas, reordenadas ou descritas durante a espera ficam como estão. */
+export function mergeStandardized(current: GalleryImage[], sent: string[], out: StdImage[]): GalleryImage[] {
+  const byUrl = new Map(sent.map((url, i) => [url, out[i]]));
+  return current.map((im) => {
+    const next = byUrl.get(im.url);
+    return next ? { ...im, ...next } : im;
+  });
+}
 
 /** Padroniza as fotos do formulário pelo padrão das Configurações (ou volta às originais). */
 function StandardizeBar({ form, enabled }: { form: FormApi; enabled: boolean }) {
@@ -54,13 +64,14 @@ function StandardizeBar({ form, enabled }: { form: FormApi; enabled: boolean }) 
           onClick={() =>
             start(async () => {
               try {
+                const sent = v.images.map((im) => im.url);
                 const r = await standardizeImagesAction(v.images.map((im) => ({ url: im.url, sourceUrl: im.sourceUrl ?? null })));
                 if (!r.ok || !r.data) {
                   toast.error(r.ok ? "Não foi possível padronizar." : r.error);
                   return;
                 }
-                const next = r.data.images;
-                form.set("images", form.values.images.map((im, i) => (next[i] ? { ...im, ...next[i] } : im)));
+                const out = r.data.images;
+                form.update((cur) => ({ images: mergeStandardized(cur.images, sent, out) }));
                 toast.success(`${pluralize(r.data.changed, "foto padronizada", "fotos padronizadas")}. Salve o produto para gravar.`);
               } catch {
                 toast.error("Falha de conexão. Tente de novo.");

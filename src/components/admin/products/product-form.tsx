@@ -83,6 +83,7 @@ export function ProductForm({
   const [saved, setSaved] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [brands, setBrands] = useState(initialBrands);
+  const [brandHint, setBrandHint] = useState<string | null>(null);
   const [tab, setTab] = useState<SectionId>("informacoes");
   const [visible, setVisible] = useState<SectionId>("informacoes");
   const [pending, start] = useTransition();
@@ -103,11 +104,13 @@ export function ProductForm({
     });
   }, []);
 
-  const addBrand = useCallback(
-    (b: { id: string; name: string }) =>
-      setBrands((list) => (list.some((x) => x.id === b.id) ? list : [...list, { id: b.id, name: b.name, active: true }].sort((a, c) => a.name.localeCompare(c.name, "pt-BR")))),
-    [],
-  );
+  const addBrand = useCallback((b: { id: string; name: string }) => {
+    setBrandHint(null);
+    setBrands((list) => (list.some((x) => x.id === b.id) ? list : [...list, { id: b.id, name: b.name, active: true }].sort((a, c) => a.name.localeCompare(c.name, "pt-BR"))));
+  }, []);
+
+  // Marca vinda da IA ou do código de barras: a cadastrada entra na lista; a nova fica só como sugestão.
+  const brandFound = useCallback((b: { id: string | null; name: string }) => (b.id ? addBrand({ id: b.id, name: b.name }) : setBrandHint(b.name)), [addBrand]);
 
   const form: FormApi = {
     values,
@@ -119,6 +122,7 @@ export function ProductForm({
       if (!Array.isArray(value)) clearErrors(key as string);
     },
     patch: (p) => setValues((v) => ({ ...v, ...p })),
+    update: (fn) => setValues((v) => ({ ...v, ...fn(v) })),
   };
 
   const errorCount = useMemo(() => {
@@ -416,7 +420,7 @@ export function ProductForm({
               <p className="min-w-0 text-sm text-muted-foreground">
                 {tools.aiName ? `Atalho: a IA (${tools.aiName}) lê as fotos e preenche o que falta.` : "Atalho: com uma IA configurada, as fotos viram descrição, ficha técnica e SEO."}
               </p>
-              <AiFillButton form={form} aiName={tools.aiName} categories={categories} brands={brands} onBrandCreated={addBrand} />
+              <AiFillButton form={form} aiName={tools.aiName} categories={categories} brands={brands} onBrandFound={brandFound} />
             </div>
             <InfoSection
               form={form}
@@ -424,10 +428,11 @@ export function ProductForm({
               categories={categories}
               brands={brands}
               autoFocusName={isNew}
+              brandHint={brandHint}
               onBrandCreated={addBrand}
             />
             <MediaSection form={form} active={tab === "fotos"} photoStandard={tools.photoStandard} />
-            <PricingSection form={form} active={tab === "preco"} price={tools.price} onBrandCreated={addBrand} />
+            <PricingSection form={form} active={tab === "preco"} price={tools.price} productId={productId} onBrandFound={brandFound} />
             <VariantsSection form={form} active={tab === "variacoes"} />
             <SpecsSection form={form} active={tab === "ficha"} />
             <SeoSection form={form} active={tab === "seo"} storeName={storeName} siteHost={siteHost} isNew={isNew} />

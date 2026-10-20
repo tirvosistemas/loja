@@ -12,6 +12,8 @@ export type FormApi = {
   values: ProductFormValues;
   set: <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => void;
   patch: (p: Partial<ProductFormValues>) => void;
+  /** Muda a partir do estado mais recente (para respostas que chegam depois de um await). */
+  update: (fn: (v: ProductFormValues) => Partial<ProductFormValues>) => void;
   errors: Record<string, string>;
   clearErrors: (prefix: string) => void;
 };

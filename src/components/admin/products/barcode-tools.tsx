@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { pluralize } from "@/lib/format";
-import { barcodeLookupAction } from "@/app/admin/(panel)/produtos/tools-actions";
+import { barcodeLookupAction, type BarcodeLookupResult } from "@/app/admin/(panel)/produtos/tools-actions";
 import type { ProductFormValues } from "./form-values";
 import type { FormApi } from "./form-kit";
 
@@ -40,7 +40,11 @@ function CameraScan({ onCode }: { onCode: (code: string) => void }) {
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-        if (stop || !video.current) return;
+        // Fechou antes da câmera abrir: a limpeza já rodou, então desliga aqui.
+        if (stop || !video.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         video.current.srcObject = stream;
         await video.current.play();
         const tick = async () => {
@@ -60,7 +64,7 @@ function CameraScan({ onCode }: { onCode: (code: string) => void }) {
         };
         tick();
       } catch {
-        setError("Não consegui abrir a câmera. Permita o acesso à câmera no navegador.");
+        if (!stop) setError("Não consegui abrir a câmera. Permita o acesso à câmera no navegador.");
       }
     })();
     return () => {
@@ -100,8 +104,54 @@ function CameraScan({ onCode }: { onCode: (code: string) => void }) {
   );
 }
 
+type Found = BarcodeLookupResult["result"];
+type Photo = { url: string; alt: string; width: number; height: number };
+
+/** O que a base trouxe vira mudança no estado mais recente: só campos vazios; as fotos entram depois das que já estão. */
+export function mergeBarcode(cur: ProductFormValues, code: string, b: Found, brandId: string | null, photos: Photo[]): Partial<ProductFormValues> {
+  const patch: Partial<ProductFormValues> = { ean: b.ean || code };
+  if (!cur.name.trim() && b.name) patch.name = b.name.slice(0, 160);
+  if (!cur.brandId && brandId) patch.brandId = brandId;
+  if (!cur.model.trim() && b.model) patch.model = b.model.slice(0, 80);
+  if (!cur.color.trim() && b.color) patch.color = b.color.slice(0, 60);
+  if (!cur.description.trim() && b.description) patch.description = b.description.slice(0, 20000);
+  if (cur.weightGrams == null && b.weightGrams) patch.weightGrams = b.weightGrams;
+  if (cur.widthCm == null && b.widthCm) patch.widthCm = b.widthCm;
+  if (cur.heightCm == null && b.heightCm) patch.heightCm = b.heightCm;
+  if (cur.depthCm == null && b.depthCm) patch.depthCm = b.depthCm;
+  if (photos.length) patch.images = [...cur.images, ...photos].slice(0, MAX_PHOTOS);
+  return patch;
+}
+
+/** Resumo do que veio da base (não depende do que já estava preenchido no formulário). */
+export function barcodeSummary(b: Found, brand: BarcodeLookupResult["brand"], photos: number): string {
+  const got = [
+    b.name && "nome",
+    brand?.id && "marca",
+    b.model && "modelo",
+    b.color && "cor",
+    b.description && "descrição",
+    (b.weightGrams || b.widthCm || b.heightCm || b.depthCm) && "medidas",
+    photos > 0 && pluralize(photos, "foto", "fotos"),
+  ].filter((x): x is string => !!x);
+  const head = `Encontrado no ${b.source}: ${b.name ?? "produto"}.`;
+  if (!got.length) return `${head} A base não trouxe outros dados.`;
+  const list = got.length > 1 ? `${got.slice(0, -1).join(", ")} e ${got[got.length - 1]}` : got[0];
+  return `${head} Veio ${list}. Só os campos vazios foram preenchidos.`;
+}
+
 /** Botões ao lado do campo EAN: buscar na base e ler pela câmera. */
-export function BarcodeTools({ form, onBrandCreated }: { form: FormApi; onBrandCreated: (b: { id: string; name: string }) => void }) {
+export function BarcodeTools({
+  form,
+  productId,
+  onBrandFound,
+  onExisting,
+}: {
+  form: FormApi;
+  productId: string | null;
+  onBrandFound: (b: { id: string | null; name: string }) => void;
+  onExisting: (p: { id: string; name: string } | null) => void;
+}) {
   const [pending, start] = useTransition();
 
   const lookup = (raw: string) =>
@@ -111,10 +161,11 @@ export function BarcodeTools({ form, onBrandCreated }: { form: FormApi; onBrandC
         toast.error("Digite o código de barras (8 a 14 números).");
         return;
       }
+      onExisting(null);
       const v = form.values;
       let r: Awaited<ReturnType<typeof barcodeLookupAction>>;
       try {
-        r = await barcodeLookupAction(code, Math.min(3, MAX_PHOTOS - v.images.length));
+        r = await barcodeLookupAction(code, Math.min(3, MAX_PHOTOS - v.images.length), productId);
       } catch {
         toast.error("Falha de conexão. Tente de novo.");
         return;
@@ -123,28 +174,16 @@ export function BarcodeTools({ form, onBrandCreated }: { form: FormApi; onBrandC
         toast.error(r.ok ? "Nada encontrado." : r.error);
         return;
       }
-      const { result: b, brand, images, warnings } = r.data;
-      if (brand) onBrandCreated(brand);
-      const cur = form.values;
-      const patch: Partial<ProductFormValues> = { ean: code };
-      if (!cur.name.trim() && b.name) patch.name = b.name.slice(0, 160);
-      if (!cur.brandId && brand) patch.brandId = brand.id;
-      if (!cur.model.trim() && b.model) patch.model = b.model.slice(0, 80);
-      if (!cur.color.trim() && b.color) patch.color = b.color.slice(0, 60);
-      if (!cur.description.trim() && b.description) patch.description = b.description.slice(0, 20000);
-      if (cur.weightGrams == null && b.weightGrams) patch.weightGrams = b.weightGrams;
-      if (cur.widthCm == null && b.widthCm) patch.widthCm = b.widthCm;
-      if (cur.heightCm == null && b.heightCm) patch.heightCm = b.heightCm;
-      if (cur.depthCm == null && b.depthCm) patch.depthCm = b.depthCm;
-      if (images.length) patch.images = [...cur.images, ...images.map((im) => ({ url: im.url, alt: "", width: im.width, height: im.height }))].slice(0, MAX_PHOTOS);
-      form.patch(patch);
+      const { result: b, brand, existing, images, warnings } = r.data;
+      if (brand) onBrandFound(brand);
+      onExisting(existing);
+      const photos = images.map((im) => ({ url: im.url, alt: "", width: im.width, height: im.height }));
+      // `form.values` é de quando clicou em Buscar; junta no estado atual para não perder o que mudou durante a busca.
+      form.update((cur) => mergeBarcode(cur, code, b, brand?.id ?? null, photos));
       warnings.forEach((w) => toast.warning(w));
-      const filled = Object.keys(patch).length - 1;
-      toast.success(
-        filled
-          ? `Encontrado no ${b.source}: ${b.name ?? "produto"}. ${pluralize(filled, "campo preenchido", "campos preenchidos")}${images.length ? ` e ${pluralize(images.length, "foto adicionada", "fotos adicionadas")}` : ""}.`
-          : `Encontrado no ${b.source}, mas os campos já estavam preenchidos.`,
-      );
+      if (existing) toast.warning(`Este código já está cadastrado em ${existing.name}. Veja o link abaixo do campo EAN.`);
+      toast.success(barcodeSummary(b, brand, photos.length));
+      if (brand && !brand.id && !v.brandId) toast.info(`A marca ${brand.name} ainda não está cadastrada. Crie com um clique no campo Marca.`);
     });
 
   return (

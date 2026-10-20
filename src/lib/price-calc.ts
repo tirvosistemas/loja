@@ -24,6 +24,9 @@ export function applyEnding(cents: number, ending: PriceCalcConfig["priceEnding"
   return candidate >= cents ? candidate : candidate + 100;
 }
 
+// Tira o ruído do ponto flutuante (1890,0000000000002 → 1890) antes de arredondar para cima.
+const snap = (cents: number) => Math.round(cents * 1e6) / 1e6;
+
 /** Preço sugerido para chegar à margem desejada (sobre o preço), pagando com cartão. null = impossível. */
 export function suggestPrice(costCents: number, cfg: PriceCalcConfig, marginPercent = cfg.targetMarginPercent, kind: PayKind = "card"): number | null {
   const fee = kind === "card" ? cfg.feeCardPercent : cfg.feePixPercent;
@@ -31,7 +34,7 @@ export function suggestPrice(costCents: number, cfg: PriceCalcConfig, marginPerc
   if (rate >= 0.95) return null;
   const fixed = costCents + cfg.packagingCents + cfg.otherCostCents;
   if (fixed <= 0) return null;
-  return applyEnding(fixed / (1 - rate), cfg.priceEnding);
+  return applyEnding(snap(fixed / (1 - rate)), cfg.priceEnding);
 }
 
 export type PriceBreakdown = {
@@ -55,7 +58,7 @@ export function priceBreakdown(priceCents: number, costCents: number, cfg: Price
 
 /** Reajuste em porcentagem (ex.: +10 ou −5), com o final escolhido. */
 export function adjustPrice(cents: number, percent: number, ending: PriceCalcConfig["priceEnding"]): number {
-  const raw = (cents * (100 + percent)) / 100;
+  const raw = snap((cents * (100 + percent)) / 100);
   if (ending === "none") return Math.max(1, Math.round(raw));
   // Reduções arredondam para o final mais próximo abaixo, para não subir o preço.
   if (percent < 0) {

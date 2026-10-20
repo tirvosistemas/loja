@@ -9,7 +9,7 @@ import { CharCount } from "@/components/admin/catalog/fields";
 import { MarkdownEditor } from "@/components/admin/catalog/markdown-editor";
 import { slugify } from "@/lib/utils";
 import type { BrandOption, CategoryOption } from "@/lib/admin/catalog";
-import { BrandQuickCreate } from "./brand-quick-create";
+import { BrandQuickCreate, BrandSuggestion } from "./brand-quick-create";
 import { TagsInput } from "./tags-input";
 import { FormField, FormSection, type FormApi } from "./form-kit";
 import type { ProductStatusKey } from "./form-values";
@@ -25,6 +25,7 @@ export function InfoSection({
   active,
   categories,
   brands,
+  brandHint,
   onBrandCreated,
   autoFocusName,
 }: {
@@ -32,6 +33,7 @@ export function InfoSection({
   active: boolean;
   categories: CategoryOption[];
   brands: BrandOption[];
+  brandHint: string | null; // marca que a IA ou o código de barras trouxe e ainda não existe
   onBrandCreated: (b: { id: string; name: string }) => void;
   autoFocusName?: boolean;
 }) {
@@ -123,6 +125,15 @@ export function InfoSection({
               <span className="sr-only"> marca</span>
             </button>
           </div>
+          {brandHint && !v.brandId && (
+            <BrandSuggestion
+              name={brandHint}
+              onCreated={(b) => {
+                onBrandCreated(b);
+                set("brandId", b.id);
+              }}
+            />
+          )}
         </FormField>
       </div>
 
