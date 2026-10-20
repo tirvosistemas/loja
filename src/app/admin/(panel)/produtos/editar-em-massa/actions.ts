@@ -51,7 +51,7 @@ const changeSchema = z.object({
   productId: z.string().max(40),
   variantId: z.string().max(40).nullable(),
   fields: fieldsSchema,
-  expectedStock: z.number().int().min(0), // estoque que a página mostrava
+  expectedStock: z.number().int(), // estoque que a página mostrava
 });
 
 export type BulkChange = z.input<typeof changeSchema>;

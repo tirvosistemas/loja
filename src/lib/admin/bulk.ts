@@ -137,7 +137,7 @@ function parseStatusLabel(s: string): BulkStatus | null {
   return null;
 }
 
-/** Tira o apóstrofo que o CSV exportado põe antes de = + - @. */
+/** Tira o apóstrofo que o CSV exportado põe antes de = + - @ (nome, SKU, marca…). */
 const unformula = (s: string) => (/^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s);
 
 // Célula numérica do .xlsx: o ponto é sempre decimal ("21.989" = 21,989), nunca milhar.
@@ -200,15 +200,15 @@ export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup
     const line = `Linha ${i + 1}`;
     for (const [idx, field] of cols.entries()) {
       if (!field || field === "productId" || field === "variantId" || field === "stockBase") continue;
-      const raw = (cells[idx] ?? "").trim();
+      const raw = unformula((cells[idx] ?? "").trim());
       if (!raw || !editable(row, field)) continue;
       const num = !!opts.numeric?.[i]?.[idx];
       switch (field) {
         case "name":
-          row.name = unformula(raw).slice(0, row.variantId ? 80 : 160);
+          row.name = raw.slice(0, row.variantId ? 80 : 160);
           break;
         case "sku": {
-          const s = unformula(raw).slice(0, 64);
+          const s = raw.slice(0, 64);
           // O Excel tira zeros à esquerda e escreve números longos como 1,23E+12.
           if (s !== row.sku && (/^\d+([.,]\d+)?e[+-]?\d+$/i.test(s) || (/^0+\d/.test(row.sku) && s === row.sku.replace(/^0+/, ""))))
             notes.push(`${line}: SKU “${raw}” parece ter sido alterado pelo Excel; mantive “${row.sku}”. Formate a coluna como Texto ou use o .xlsx.`);

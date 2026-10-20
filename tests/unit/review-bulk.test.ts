@@ -86,7 +86,6 @@ const STOCK = col("Estoque");
 const WEIGHT = col("Peso (g)");
 const EAN = col("EAN");
 const SKU = col("SKU");
-const NAME = col("Nome");
 
 const viaXlsx = (current: BulkRow[], cells: (string | number | null)[][]) => {
   const x = readXlsx(buildXlsx(cells));
@@ -278,6 +277,14 @@ describe("CSV sem fórmulas (K26)", () => {
     const r = applySheet(rows, parseCsv(csv), lookup);
     expect(r.changed).toBe(0);
     expect(r.notes).toEqual([]);
+  });
+
+  it("marca que começa com @ também volta sem o apóstrofo", () => {
+    const brands = { categories: [], brands: [{ id: "b1", name: "@home" }] };
+    const rows = [row({ brandId: "b1" })];
+    const csv = sheetToCsv(rowsToSheet(rows, brands));
+    expect(csv).toContain(";'@home;");
+    expect(applySheet(rows, parseCsv(csv), brands)).toMatchObject({ changed: 0, notes: [] });
   });
 
   it("número negativo e texto comum não mudam", () => {
