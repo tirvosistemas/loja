@@ -209,6 +209,7 @@ async function upcitemdb(code: string): Promise<BarcodeResult | null> {
 }
 
 function remember(code: string, r: BarcodeResult | null) {
+  upcCache.delete(code);
   if (upcCache.size >= UPC_CACHE_MAX) upcCache.delete(upcCache.keys().next().value!);
   upcCache.set(code, { at: Date.now(), r });
   return r;
