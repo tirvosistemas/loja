@@ -14,7 +14,7 @@ import { formatBRL, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustPrice, suggestPrice, type PriceCalcConfig } from "@/lib/price-calc";
 import { applySheet, diffRow, editable, STATUS_LABEL, type BulkField, type BulkRow, type BulkStatus, type Lookup } from "@/lib/admin/bulk";
-import { parseCsv, parseXlsx } from "@/lib/importer/sheet";
+import { parseCsv, readXlsx } from "@/lib/importer/sheet";
 import { readText } from "./import-files";
 import { ProductThumb } from "./product-thumb";
 import { saveBulkEdit, type BulkChange } from "@/app/admin/(panel)/produtos/editar-em-massa/actions";
@@ -173,8 +173,8 @@ export function BulkEditor({ initial, lookup, price, truncated }: { initial: Bul
 
   const loadSheet = async (file: File) => {
     try {
-      const sheet = /\.xlsx$/i.test(file.name) ? parseXlsx(new Uint8Array(await file.arrayBuffer())) : parseCsv(await readText(file));
-      const r = applySheet(rows, sheet, lookup);
+      const xlsx = /\.xlsx$/i.test(file.name) ? readXlsx(new Uint8Array(await file.arrayBuffer())) : null;
+      const r = applySheet(rows, xlsx ? xlsx.rows : parseCsv(await readText(file)), lookup, { numeric: xlsx?.numeric });
       setRows(r.rows);
       setNotes(r.notes);
       setOnlyChanged(r.changed > 0);
@@ -192,7 +192,11 @@ export function BulkEditor({ initial, lookup, price, truncated }: { initial: Bul
     startSave(async () => {
       const changes: BulkChange[] = rows
         .filter((r) => changedKeys.has(r.key))
-        .map((r) => ({ key: r.key, productId: r.productId, variantId: r.variantId, fields: diffRow(original.get(r.key)!, r) as BulkChange["fields"] }));
+        .map((r) => {
+          const o = original.get(r.key)!;
+          // expectedStock: o servidor só troca o estoque se ele ainda for o que a página mostrou.
+          return { key: r.key, productId: r.productId, variantId: r.variantId, fields: diffRow(o, r) as BulkChange["fields"], expectedStock: o.stock };
+        });
       const errs = new Map<string, string>();
       let saved = 0;
       // Lotes por produto, para cada produto ir inteiro num pedido.
@@ -372,14 +376,16 @@ export function BulkEditor({ initial, lookup, price, truncated }: { initial: Bul
   return (
     <div className="space-y-4">
       {truncated && (
-        <p className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm">Mostrando os 3.000 produtos mais recentes. Use a exportação por planilha para o restante.</p>
+        <p className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm">
+          Mostrando só os 3.000 produtos cadastrados mais recentemente; a planilha exportada traz os mesmos. Os mais antigos ficam de fora da edição em massa: edite-os em Produtos.
+        </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <a href="/api/admin/produtos/exportar" className={buttonVariants({ variant: "secondary", size: "sm" })}>
           <Download aria-hidden /> Exportar planilha (.xlsx)
         </a>
-        <a href="/api/admin/produtos/exportar?formato=csv" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+        <a href="/api/admin/produtos/exportar?formato=csv" title="Para editar no Excel, prefira o .xlsx: no CSV o Excel pode estragar EAN e SKU só com números." className={buttonVariants({ variant: "ghost", size: "sm" })}>
           <FileSpreadsheet aria-hidden /> CSV
         </a>
         <Button type="button" size="sm" variant="secondary" onClick={() => fileRef.current?.click()}>

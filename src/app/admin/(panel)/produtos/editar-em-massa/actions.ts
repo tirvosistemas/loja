@@ -10,8 +10,8 @@ import { pluralize } from "@/lib/format";
 import { MAX_PRICE_CENTS } from "@/lib/admin/product-schema";
 import { MAX_BULK_PRODUCTS } from "@/lib/admin/bulk-server";
 
-// Edição em massa: grava só os campos alterados, produto por produto. Um produto com erro
-// (SKU repetido, preço "de" menor que o preço…) não impede os outros.
+// Edição em massa: grava só os campos alterados, produto por produto (tudo ou nada em cada
+// um). Um produto com erro (SKU repetido, preço "de" menor que o preço…) não impede os outros.
 
 const money = z.number().int().min(0).max(MAX_PRICE_CENTS);
 const sku = z
@@ -51,6 +51,7 @@ const changeSchema = z.object({
   productId: z.string().max(40),
   variantId: z.string().max(40).nullable(),
   fields: fieldsSchema,
+  expectedStock: z.number().int(), // estoque que a página mostrava
 });
 
 export type BulkChange = z.input<typeof changeSchema>;
@@ -65,23 +66,31 @@ class RowError extends Error {
   }
 }
 
+const STOCK_CHANGED = "O estoque mudou desde que a página abriu (venda nova?). Recarregue e tente de novo.";
+
 export async function saveBulkEdit(changes: BulkChange[]): Promise<ActionResult<BulkSaveResult>> {
   await requireAdmin();
   const list = z.array(z.unknown()).max(MAX_BULK_PRODUCTS * 6).safeParse(changes);
   if (!list.success) return fail("Alterações demais de uma vez.");
   const errors: BulkSaveResult["errors"] = [];
   const valid: z.output<typeof changeSchema>[] = [];
+  const invalidProducts = new Set<unknown>();
   for (const raw of list.data) {
     const c = changeSchema.safeParse(raw);
     if (c.success) valid.push(c.data);
     else {
       const key = (raw as { key?: string })?.key ?? "?";
       errors.push({ key, message: c.error.issues[0]?.message ?? "Valor inválido." });
+      invalidProducts.add((raw as { productId?: unknown })?.productId);
     }
   }
 
+  // Linha com erro trava o produto inteiro: a tela trata cada produto como tudo ou nada.
   const byProduct = new Map<string, z.output<typeof changeSchema>[]>();
-  for (const c of valid) byProduct.set(c.productId, [...(byProduct.get(c.productId) ?? []), c]);
+  for (const c of valid) {
+    if (invalidProducts.has(c.productId)) errors.push({ key: c.key, message: "Corrija a linha com erro deste produto; nada dele foi salvo." });
+    else byProduct.set(c.productId, [...(byProduct.get(c.productId) ?? []), c]);
+  }
 
   const [categories, brands] = await Promise.all([db.category.findMany({ select: { id: true } }), db.brand.findMany({ select: { id: true } })]);
   const catIds = new Set(categories.map((c) => c.id));
@@ -109,7 +118,11 @@ export async function saveBulkEdit(changes: BulkChange[]): Promise<ActionResult<
         }
         if (f.compareAtCents !== undefined) data.compareAtCents = f.compareAtCents || null;
         if (f.costCents !== undefined) data.costCents = f.costCents;
-        if (f.stock !== undefined && !p.variants.length) data.stock = f.stock;
+        // Estoque só grava se ainda for o que a página mostrou; senão uma venda feita no meio tempo se perderia.
+        if (f.stock !== undefined && !p.variants.length) {
+          const r = await tx.product.updateMany({ where: { id: productId, stock: productChange!.expectedStock }, data: { stock: f.stock } });
+          if (!r.count) throw new RowError(productChange!.key, STOCK_CHANGED);
+        }
         if (f.categoryId !== undefined) {
           if (f.categoryId && !catIds.has(f.categoryId)) throw new RowError(productChange!.key, "Categoria não encontrada.");
           data.categoryId = f.categoryId || null;
@@ -136,7 +149,7 @@ export async function saveBulkEdit(changes: BulkChange[]): Promise<ActionResult<
           const v = p.variants.find((x) => x.id === c.variantId);
           if (!v) throw new RowError(c.key, "Variação não encontrada.");
           const vf = c.fields;
-          const vd: Prisma.ProductVariantUpdateInput = {};
+          const vd: Prisma.ProductVariantUpdateManyMutationInput = {};
           if (vf.name !== undefined) {
             if (vf.name.length > 80) throw new RowError(c.key, "Nome da variação com mais de 80 caracteres.");
             if (p.variants.some((o) => o.id !== v.id && o.name.toLowerCase() === vf.name!.toLowerCase())) throw new RowError(c.key, "Já existe uma variação com esse nome.");
@@ -156,12 +169,14 @@ export async function saveBulkEdit(changes: BulkChange[]): Promise<ActionResult<
           const vCompare = vd.compareAtCents !== undefined ? (vd.compareAtCents as number | null) : v.compareAtCents;
           if (vCompare != null && vCompare <= vPrice) throw new RowError(c.key, "O preço “de” da variação precisa ser maior que o preço.");
           if (Object.keys(vd).length) {
+            let count: number;
             try {
-              await tx.productVariant.update({ where: { id: v.id }, data: vd });
+              ({ count } = await tx.productVariant.updateMany({ where: { id: v.id, ...(vd.stock !== undefined && { stock: c.expectedStock }) }, data: vd }));
             } catch (e) {
               if (isUniqueError(e)) throw new RowError(c.key, "SKU já usado em outro produto.");
               throw e;
             }
+            if (!count) throw new RowError(c.key, vd.stock !== undefined ? STOCK_CHANGED : "Variação não encontrada.");
           }
         }
         if (variantsChanged) {
