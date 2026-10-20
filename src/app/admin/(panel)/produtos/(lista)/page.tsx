@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Package, Plus, SearchX } from "lucide-react";
+import { Package, Plus, SearchX, Upload } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { pluralize } from "@/lib/format";
@@ -31,9 +31,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         title="Produtos"
         description="Cadastre, edite e organize o que aparece na loja."
         actions={
-          <Link href="/admin/produtos/novo" className={buttonVariants()}>
-            <Plus aria-hidden /> Novo produto
-          </Link>
+          <>
+            <Link href="/admin/produtos/importar" className={buttonVariants({ variant: "secondary" })}>
+              <Upload aria-hidden /> Importar
+            </Link>
+            <Link href="/admin/produtos/novo" className={buttonVariants()}>
+              <Plus aria-hidden /> Novo produto
+            </Link>
+          </>
         }
       />
 
@@ -83,9 +88,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           title="Nenhum produto cadastrado"
           description="Cadastre o primeiro produto com fotos, preço e estoque. Ele aparece na loja assim que estiver ativo."
           action={
-            <Link href="/admin/produtos/novo" className={buttonVariants({ size: "sm" })}>
-              <Plus aria-hidden /> Cadastrar produto
-            </Link>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/admin/produtos/novo" className={buttonVariants({ size: "sm" })}>
+                <Plus aria-hidden /> Cadastrar produto
+              </Link>
+              <Link href="/admin/produtos/importar" className={buttonVariants({ size: "sm", variant: "secondary" })}>
+                <Upload aria-hidden /> Importar vários
+              </Link>
+            </div>
           }
         />
       ) : items.length === 0 ? (

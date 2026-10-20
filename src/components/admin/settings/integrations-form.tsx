@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BarChart3, CheckCircle2, CreditCard, ExternalLink, Map as MapIcon, PlugZap, XCircle } from "lucide-react";
+import { BarChart3, CheckCircle2, CreditCard, ExternalLink, FolderInput, Map as MapIcon, PlugZap, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,10 @@ export function IntegrationsForm({ initial, previews: initialPreviews, webhookUr
         clearStripeWebhookSecret: false,
         mapsApiKey: "",
         clearMapsApiKey: false,
+        googleDriveApiKey: "",
+        clearGoogleDriveApiKey: false,
+        anthropicApiKey: "",
+        clearAnthropicApiKey: false,
         googleAnalyticsId: values.googleAnalyticsId.toUpperCase(),
       };
     },
@@ -328,6 +332,67 @@ export function IntegrationsForm({ initial, previews: initialPreviews, webhookUr
             )}
           </TestResult>
         )}
+      </Section>
+
+      <Section
+        title={
+          <span className="inline-flex items-center gap-2">
+            <FolderInput className="size-4 text-subtle" aria-hidden /> Importador de produtos
+          </span>
+        }
+        description="Chaves usadas em Produtos → Importar. As duas são opcionais."
+      >
+        <SettingsField
+          name="googleDriveApiKey"
+          label="Chave do Google Drive"
+          htmlFor="in-drive"
+          error={e.googleDriveApiKey}
+          hint={!previews.googleDriveApiKey ? "Para ler pastas do Drive compartilhadas como “Qualquer pessoa com o link”." : undefined}
+        >
+          <SecretInput
+            id="in-drive"
+            value={v.googleDriveApiKey}
+            onChange={(x) => set("googleDriveApiKey", x)}
+            preview={previews.googleDriveApiKey}
+            cleared={v.clearGoogleDriveApiKey}
+            onClearChange={(c) => f.patch({ clearGoogleDriveApiKey: c, googleDriveApiKey: "" })}
+            placeholder="AIza…"
+            invalid={!!e.googleDriveApiKey}
+          />
+        </SettingsField>
+        <div className="rounded-xl border border-border bg-elevated/40 px-4 py-3 text-[13px] text-muted-foreground">
+          <p>
+            No Google Cloud, crie um projeto, ative a <strong className="font-medium text-foreground">Google Drive API</strong> e gere uma chave de API. Em
+            “Restrições”, limite a chave só à Drive API (sem restrição de site ou IP). É gratuito.
+          </p>
+          <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 font-medium text-foreground hover:text-primary">
+            Ativar a Drive API <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        </div>
+        <SettingsField
+          name="anthropicApiKey"
+          label="Chave da Anthropic (Claude)"
+          htmlFor="in-anthropic"
+          error={e.anthropicApiKey}
+          hint={!previews.anthropicApiKey ? "Liga o preenchimento com IA: lê as fotos da caixa e do manual e escreve ficha técnica, descrição e SEO." : undefined}
+        >
+          <SecretInput
+            id="in-anthropic"
+            value={v.anthropicApiKey}
+            onChange={(x) => set("anthropicApiKey", x)}
+            preview={previews.anthropicApiKey}
+            cleared={v.clearAnthropicApiKey}
+            onClearChange={(c) => f.patch({ clearAnthropicApiKey: c, anthropicApiKey: "" })}
+            placeholder="sk-ant-…"
+            invalid={!!e.anthropicApiKey}
+          />
+        </SettingsField>
+        <div className="rounded-xl border border-border bg-elevated/40 px-4 py-3 text-[13px] text-muted-foreground">
+          <p>Crie a chave no Console da Anthropic e coloque créditos. O uso é cobrado por produto lido, direto pela Anthropic.</p>
+          <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 font-medium text-foreground hover:text-primary">
+            Criar chave da Anthropic <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        </div>
       </Section>
 
       <Section

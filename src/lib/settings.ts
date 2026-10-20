@@ -94,6 +94,8 @@ export const integrationsSchema = z.object({
   stripeWebhookSecret: str(""), // criptografado
   mapsProvider: z.enum(["osm", "google", "openrouteservice", "mapbox"]).default("osm"),
   mapsApiKey: str(""), // criptografado
+  googleDriveApiKey: str(""), // criptografado · importador de produtos
+  anthropicApiKey: str(""), // criptografado · IA do importador (Claude)
   googleAnalyticsId: str(""),
   metaPixelId: str(""),
 });
@@ -146,7 +148,7 @@ export type PushSettings = Settings["push"];
 
 /** Campos guardados criptografados. */
 export const SECRET_FIELDS: { [K in SettingsGroup]?: string[] } = {
-  integrations: ["stripeSecretKey", "stripeWebhookSecret", "mapsApiKey"],
+  integrations: ["stripeSecretKey", "stripeWebhookSecret", "mapsApiKey", "googleDriveApiKey", "anthropicApiKey"],
   push: ["vapidPrivateKey"],
 };
 
@@ -229,6 +231,8 @@ export async function getSecretPreviews() {
     stripeSecretKey: maskSecret(s.integrations.stripeSecretKey),
     stripeWebhookSecret: maskSecret(s.integrations.stripeWebhookSecret),
     mapsApiKey: maskSecret(s.integrations.mapsApiKey),
+    googleDriveApiKey: maskSecret(s.integrations.googleDriveApiKey),
+    anthropicApiKey: maskSecret(s.integrations.anthropicApiKey),
     vapidPrivateKey: maskSecret(s.push.vapidPrivateKey),
   };
 }

@@ -13,6 +13,7 @@ Loja virtual de eletrônicos (headsets gamer, fones de ouvido, controles, miniga
 - **Pagamentos:** online pela **Stripe** (cartão, Pix ou boleto), **Pix** para a chave da loja ou **na entrega** (dinheiro com troco, maquininha ou Pix).
 - **Marketing:** promoções automáticas por categoria, marca ou produto, ofertas relâmpago, cupons (porcentagem, valor fixo, frete grátis, primeira compra, limite de uso), banners e newsletter.
 - **App instalável (PWA)** com **notificações push** de promoções enviadas pelo painel.
+- **Importador de produtos:** cadastra centenas de produtos de uma vez a partir de pastas do computador, `.zip`, Google Drive ou planilha (Excel/CSV, inclusive as exportadas do Mercado Livre e da Shopee), com preenchimento opcional por IA (Claude) lendo as fotos da caixa e do manual.
 - **Painel completo:** dashboard de vendas, pedidos com linha do tempo e impressão, clientes, produtos com imagens, categorias, marcas, avaliações, banners, promoções, cupons, notificações, páginas institucionais, usuários com níveis de acesso e todas as configurações da loja.
 
 **Tecnologia:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 + MySQL 8 · Stripe · Web Push · Docker + Caddy.
@@ -80,11 +81,38 @@ Em **Painel → Configurações**, nesta ordem:
 5. **Integrações:**
    - **Stripe:** cole a chave publicável (`pk_…`) e a secreta (`sk_…`) do [painel da Stripe](https://dashboard.stripe.com/apikeys). Crie o webhook em *Developers → Webhooks* com o endereço `https://SEU-DOMINIO/api/stripe/webhook` e os eventos `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` e `checkout.session.expired`; cole o segredo (`whsec_…`). Depois ative o pagamento online em *Pagamentos*.
    - **Mapas:** o padrão (OpenStreetMap) é gratuito, mas tem limite de uso. Para a loja real, escolha Google Maps, OpenRouteService ou Mapbox e cole a chave.
+   - **Importador de produtos** (opcionais): chave do Google Drive, para ler pastas direto do Drive, e chave da Anthropic, para o preenchimento com IA. Detalhes em [Importando produtos](#importando-produtos).
    - Google Analytics e Meta Pixel (opcionais, só carregam com o consentimento de cookies).
 6. **App e notificações:** as chaves de notificação são geradas sozinhas. Ajuste o convite para ativar as notificações. As campanhas são enviadas em **Marketing → Notificações do app**.
 7. **SEO e aparência:** título e descrição para o Google, imagem de compartilhamento, tema padrão (escuro ou claro) e seções da página inicial.
 
 Depois: confira as **categorias** (as de eletrônicos já vêm criadas pelo seed; renomeie, esconda ou crie outras à vontade), cadastre **marcas e produtos**, os **banners**, **promoções** e **cupons**, revise as **páginas** (trocas, entregas, privacidade…) e, em **Usuários**, troque a senha do administrador e crie acessos para a equipe (proprietário, administrador ou editor).
+
+---
+
+## Importando produtos
+
+Em **Produtos → Importar**. Tudo entra como **rascunho** (a não ser que marque *Publicar direto*): revise e ative em massa na lista de produtos. Produto com o mesmo SKU ou o mesmo nome de um já cadastrado é pulado, então dá para rodar de novo sem duplicar.
+
+**Pastas (computador, `.zip` ou Google Drive):** uma subpasta por produto.
+
+```
+Produtos/
+├─ Fone JBL Tune 520BT/
+│  ├─ 01.jpg … 12.jpg     fotos do anúncio, em ordem (01 é a capa)
+│  ├─ info-caixa.jpg      fotos de apoio: começam com info, caixa, manual ou etiqueta
+│  ├─ info/               (ou ficam numa subpasta) e não aparecem na loja
+│  └─ dados.txt
+└─ Headset Gamer XYZ/
+```
+
+O `dados.txt` tem uma informação por linha (`preco: 299,90`, `estoque: 10`, `categoria: Fones de Ouvido`, `marca: JBL`, `voltagem: bivolt`, `peso: 250 g`, `medidas: 20 x 18 x 6 cm`…) e as seções `[especificacoes]`, `[variacoes]` e `[descricao]`. Só o preço é obrigatório; sem `nome`, vale o nome da pasta. Baixe o modelo completo na tela do importador. No Drive, o `dados` pode ser um documento do Google.
+
+- **Google Drive:** compartilhe a pasta principal como *Qualquer pessoa com o link* (leitor) e cole o link. Precisa de uma chave de API do Google Cloud com a **Google Drive API** ativada (gratuita), cadastrada em *Configurações → Integrações*. Sem chave, baixe a pasta do Drive (vem em `.zip`) e use a opção `.zip`.
+- **Planilha:** uma linha por produto; as colunas são reconhecidas pelo nome (nome/título, preço, estoque, SKU, EAN, marca, categoria, descrição, fotos…). Fotos são links (separados por vírgula ou em colunas *Imagem 1, Imagem 2…*). Linhas com o mesmo código de anúncio viram variações. Aceita a planilha de edição em massa do **Mercado Livre** e a de atualização em massa da **Shopee** do jeito que são baixadas (importe só anúncios seus).
+- **IA (Claude):** com a chave da Anthropic cadastrada, marque *Preencher com IA*. Ela lê as fotos de apoio (ou as primeiras fotos) e completa nome, marca, modelo, categoria, ficha técnica, descrição, EAN, medidas e SEO. Nunca mexe em preço e estoque, e o que estiver no `dados.txt` prevalece. O custo é de alguns centavos por produto, cobrado pela Anthropic.
+
+Fotos de até 40 MB (Drive e links) ou 8 MB (computador; as maiores são reduzidas no navegador) viram WebP em 3 tamanhos, como no cadastro normal.
 
 ---
 
@@ -238,6 +266,7 @@ src/app/(store)/     loja (páginas públicas)
 src/app/admin/       painel
 src/app/api/         carrinho, frete, pedidos, Stripe, notificações, uploads
 src/lib/             regras: preços, cupons, frete, pedidos, configurações
+src/lib/importer/    importador de produtos (dados.txt, pastas, planilhas, Drive, IA)
 src/components/      interface da loja, do painel e componentes base
 prisma/              schema, migrações e seed (páginas e categorias iniciais em prisma/seed/)
 Dockerfile, docker-compose.yml, docker/   imagem de produção, MySQL e Caddy

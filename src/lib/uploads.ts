@@ -21,8 +21,9 @@ const ACCEPTED_FORMATS = new Set(["jpeg", "jpg", "png", "webp", "avif", "gif", "
  * Converte qualquer imagem (JPG, PNG, WebP, AVIF, GIF, HEIC) em 3 WebP otimizados.
  * Retorna a chave para guardar no banco. SVG não é aceito (risco de script embutido).
  */
-export async function saveImage(input: Buffer, folder: UploadFolder, opts: { fit?: "inside" | "cover" } = {}) {
-  if (input.byteLength > MAX_UPLOAD_BYTES) throw new Error("Imagem maior que 8 MB.");
+export async function saveImage(input: Buffer, folder: UploadFolder, opts: { fit?: "inside" | "cover"; maxBytes?: number } = {}) {
+  const max = opts.maxBytes ?? MAX_UPLOAD_BYTES;
+  if (input.byteLength > max) throw new Error(`Imagem maior que ${Math.round(max / 1024 / 1024)} MB.`);
   let meta: SharpMetadata;
   try {
     meta = await sharp(input, { failOn: "error" }).metadata();

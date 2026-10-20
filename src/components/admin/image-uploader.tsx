@@ -12,7 +12,7 @@ type Uploaded = { key: string; width: number | null; height: number | null };
 
 const dimension = (n: unknown) => (typeof n === "number" && Number.isInteger(n) && n > 0 ? n : null);
 
-async function uploadFile(file: File, folder: UploadFolder): Promise<Uploaded> {
+export async function uploadFile(file: File, folder: UploadFolder): Promise<Uploaded> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("folder", folder);

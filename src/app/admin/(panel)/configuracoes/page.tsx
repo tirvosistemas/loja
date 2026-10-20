@@ -22,7 +22,7 @@ const TABS: { id: string; label: string; icon: LucideIcon; description: string }
   { id: "endereco", label: "Endereço e retirada", icon: MapPin, description: "De onde saem as entregas e onde o cliente retira." },
   { id: "frete", label: "Frete e entrega", icon: Bike, description: "Preço por km, frete grátis, raio e cidades atendidas." },
   { id: "pagamentos", label: "Pagamentos", icon: CreditCard, description: "Stripe, Pix e pagamento na entrega." },
-  { id: "integracoes", label: "Integrações", icon: KeyRound, description: "Chaves da Stripe, mapas e análise de visitas." },
+  { id: "integracoes", label: "Integrações", icon: KeyRound, description: "Chaves da Stripe, mapas, importador de produtos e análise de visitas." },
   { id: "app", label: "App e notificações", icon: BellRing, description: "Notificações push e instalação do app." },
   { id: "seo", label: "SEO e aparência", icon: Search, description: "Google, compartilhamento e visual da loja." },
 ];
@@ -70,10 +70,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             mapsProvider: i.mapsProvider,
             mapsApiKey: "",
             clearMapsApiKey: false,
+            googleDriveApiKey: "",
+            clearGoogleDriveApiKey: false,
+            anthropicApiKey: "",
+            clearAnthropicApiKey: false,
             googleAnalyticsId: i.googleAnalyticsId,
             metaPixelId: i.metaPixelId,
           }}
-          previews={{ stripeSecretKey: previews.stripeSecretKey, stripeWebhookSecret: previews.stripeWebhookSecret, mapsApiKey: previews.mapsApiKey }}
+          previews={{ stripeSecretKey: previews.stripeSecretKey, stripeWebhookSecret: previews.stripeWebhookSecret, mapsApiKey: previews.mapsApiKey, googleDriveApiKey: previews.googleDriveApiKey, anthropicApiKey: previews.anthropicApiKey }}
           webhookUrl={absoluteUrl("/api/stripe/webhook")}
         />
       );
