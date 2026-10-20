@@ -36,36 +36,73 @@ async function toJpeg(input: Buffer) {
 
 const modelCache = new Map<string, { model: string; at: number }>();
 
-async function httpJson(url: string, init: RequestInit & { provider: AiProviderId }) {
-  let res: Response;
-  try {
-    res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store" });
-  } catch (e) {
-    throw new AiError((e as Error)?.name === "TimeoutError" ? "A IA demorou demais para responder." : "Não foi possível conectar à IA. Confira a internet do servidor.");
-  }
-  const text = await res.text();
-  let body: unknown = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = null;
-  }
-  if (!res.ok) throw httpError(res.status, init.provider, body, text);
-  return body as Record<string, unknown>;
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+// Cota diária ou falta de crédito: repetir não adianta.
+const DAILY_OR_BILLING = /per ?day|insufficient_quota|credit|balance/i;
+// O modelo não aceita fotos (o OpenRouter responde 404 nesse caso).
+const IMAGE_REJECT = /image|vision|multimodal|image_url/i;
+
+/** Tempo de espera pedido pelo provedor, em ms (Retry-After, retryDelay do Gemini ou "retry in Ns"). */
+function askedDelayMs(raw: string, retryAfter: string | null): number | null {
+  const h = retryAfter?.trim();
+  if (h && /^\d+(\.\d+)?$/.test(h)) return Number(h) * 1000;
+  if (h && !Number.isNaN(Date.parse(h))) return Math.max(0, Date.parse(h) - Date.now());
+  const g = raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  if (g) return Number(g[1]) * 1000;
+  const t = raw.match(/(?:retry|try again) in (\d+(?:\.\d+)?)\s*(ms|s)\b/i);
+  return t ? Number(t[1]) * (t[2].toLowerCase() === "ms" ? 1 : 1000) : null;
 }
 
-function httpError(status: number, provider: AiProviderId, body: unknown, raw: string) {
+/**
+ * Espera antes de repetir um pedido recusado por limite de uso ou instabilidade do provedor:
+ * o tempo pedido por ele, se for de até 60 s, ou 2 s, 4 s… com um pouco de variação.
+ * null = não repetir (cota diária, falta de crédito ou outro erro).
+ */
+export function retryDelayMs(status: number, raw: string, retryAfter: string | null, attempt: number): number | null {
+  if (!RETRY_STATUS.has(status) || DAILY_OR_BILLING.test(raw)) return null;
+  const asked = askedDelayMs(raw, retryAfter);
+  if (asked === null) return 2000 * 2 ** attempt + Math.random() * 1000;
+  return asked <= 60_000 ? asked + Math.random() * 1000 : null;
+}
+
+async function httpJson(url: string, init: RequestInit & { provider: AiProviderId }) {
+  const deadline = Date.now() + TIMEOUT_MS;
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url, { ...init, signal: AbortSignal.timeout(Math.max(deadline - Date.now(), 1000)), cache: "no-store" });
+    } catch (e) {
+      throw new AiError((e as Error)?.name === "TimeoutError" ? "A IA demorou demais para responder." : "Não foi possível conectar à IA. Confira a internet do servidor.");
+    }
+    const text = await res.text();
+    let body: unknown = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = null;
+    }
+    if (res.ok) return body as Record<string, unknown>;
+    // Limite por minuto ou provedor sobrecarregado: espera e tenta de novo (até 2 vezes, dentro do prazo).
+    const wait = attempt < 2 ? retryDelayMs(res.status, text, res.headers.get("retry-after"), attempt) : null;
+    if (wait === null || Date.now() + wait + 10_000 > deadline) throw httpError(res.status, init.provider, body, text);
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+
+export function httpError(status: number, provider: AiProviderId, body: unknown, raw: string) {
   const name = aiProvider(provider).name;
   const b = (Array.isArray(body) ? body[0] : body) as { error?: { message?: string } | string; message?: string } | null;
   const detail = (typeof b?.error === "string" ? b.error : b?.error?.message) ?? b?.message ?? raw.slice(0, 200);
   const e = new AiError(
     status === 401 || (status === 400 && /api[_ ]?key/i.test(detail)) || (status === 403 && /key|auth|permission/i.test(detail))
       ? `Chave de API recusada pelo ${name}. Confira em Configurações → Inteligência artificial.`
-      : status === 402 || /credit|balance|billing|quota exceeded|insufficient/i.test(detail)
-        ? `Sem créditos ou cota no ${name}.`
-        : status === 429
-          ? `O ${name} pediu uma pausa (limite de uso atingido). Tente de novo em alguns minutos.`
-          : status === 404
+      : status === 429
+        ? DAILY_OR_BILLING.test(raw)
+          ? `Sem créditos ou cota no ${name}.`
+          : `O ${name} pediu uma pausa (limite de uso atingido). Tente de novo em alguns minutos.`
+        : status === 402 || /credit|balance|billing|quota exceeded|insufficient/i.test(detail)
+          ? `Sem créditos ou cota no ${name}.`
+          : status === 404 && !IMAGE_REJECT.test(detail)
             ? `Modelo não encontrado no ${name}. Escolha outro em Configurações → Inteligência artificial.`
             : `O ${name} recusou o pedido (${status}): ${detail}`.slice(0, 300),
   );
@@ -139,22 +176,59 @@ export function looseParse<S extends z.ZodObject>(schema: S, data: unknown): z.i
   return out as z.infer<S>;
 }
 
-function extractJson(text: string): unknown {
-  const t = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-  try {
-    return JSON.parse(t);
-  } catch {
-    const a = t.indexOf("{");
-    const b = t.lastIndexOf("}");
-    if (a >= 0 && b > a) {
+/** Fim do objeto JSON que começa em start (chaves equilibradas, fora de strings), ou -1. */
+function objectEnd(t: string, start: number) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < t.length; i++) {
+    const ch = t[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * Tira o objeto JSON da resposta: ignora o raciocínio em <think>…</think>, prefere o bloco
+ * ```json e, se ainda houver texto em volta, usa o primeiro objeto completo que seja JSON válido.
+ */
+export function extractJson(text: string): unknown {
+  const t = text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/^[\s\S]*<\/think>/i, "")
+    .trim();
+  const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  for (const candidate of [t, fenced]) {
+    if (!candidate) continue;
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      /* tenta o próximo */
+    }
+  }
+  for (let i = t.indexOf("{"); i >= 0; ) {
+    const end = objectEnd(t, i);
+    if (end > i) {
       try {
-        return JSON.parse(t.slice(a, b + 1));
+        return JSON.parse(t.slice(i, end + 1));
       } catch {
-        /* cai no erro abaixo */
+        /* segue procurando */
       }
     }
-    throw new AiError("A IA não devolveu os dados no formato esperado.");
+    i = t.indexOf("{", end > i ? end + 1 : i + 1);
   }
+  throw new AiError("A IA não devolveu os dados no formato esperado.");
+}
+
+/** Claude antigos (3.x, Opus e Sonnet 4.0/4.1, Sonnet e Haiku 4.5) recusam o parâmetro effort. */
+export function claudeAcceptsEffort(model: string) {
+  return !/^claude-(3|(opus|sonnet)-4-(0|1|\d{8})(-|$)|(sonnet|haiku)-4-5)/.test(model);
 }
 
 function anthropicError(e: unknown) {
@@ -163,7 +237,14 @@ function anthropicError(e: unknown) {
   if (e instanceof Anthropic.RateLimitError) return new AiError("A IA pediu uma pausa (limite de uso). Tente de novo em alguns minutos.");
   if (e instanceof Anthropic.NotFoundError) return new AiError("Modelo não encontrado na Anthropic. Escolha outro em Configurações → Inteligência artificial.");
   if (e instanceof Anthropic.BadRequestError && /credit|balance/i.test(e.message)) return new AiError("Sem créditos na conta da Anthropic.");
-  if (e instanceof Anthropic.APIError) return new AiError(`A IA falhou (${e.status ?? "conexão"}).`);
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return new AiError("A IA demorou demais para responder.");
+  if (e instanceof Anthropic.APIConnectionError) return new AiError("Não foi possível conectar à IA. Confira a internet do servidor.");
+  if (e instanceof Anthropic.APIError) {
+    const detail = (e.error as { error?: { message?: string } } | undefined)?.error?.message;
+    return new AiError(`A IA falhou (${e.status ?? "conexão"})${detail ? `: ${detail}` : "."}`.slice(0, 300));
+  }
+  // Resposta que não pôde ser lida (o SDK embrulha o erro em inglês).
+  if (e instanceof Anthropic.AnthropicError) return new AiError("A IA não devolveu os dados no formato esperado.");
   return e instanceof AiError ? e : new AiError((e as Error)?.message || "A IA falhou.");
 }
 
@@ -181,11 +262,13 @@ export async function aiJson<S extends z.ZodObject>(opts: { config: AiConfig; sc
 
   if (cfg.provider === "anthropic") {
     const client = new Anthropic({ apiKey: cfg.apiKey, timeout: TIMEOUT_MS, maxRetries: 2 });
+    // Mesmo schema para a API, mas leitura tolerante: um campo fora do formato vira null.
+    const format = { ...betaZodOutputFormat(schema), parse: (content: string) => looseParse(schema, extractJson(content)) };
     try {
       const response = await client.beta.messages.parse({
         model,
         max_tokens: Math.max(maxTokens, 16000),
-        output_config: { effort: "low", format: betaZodOutputFormat(schema) },
+        output_config: claudeAcceptsEffort(model) ? { effort: "low", format } : { format },
         system: opts.system,
         messages: [
           {
@@ -272,13 +355,13 @@ export async function aiJson<S extends z.ZodObject>(opts: { config: AiConfig; sc
       return { data: looseParse(schema, extractJson(text)), model, imagesIgnored };
     } catch (e) {
       const err = e as AiError & { status?: number; detail?: string };
-      if (attempt >= 2 || err.status !== 400) throw e;
       const detail = err.detail ?? "";
-      // Modelo só de texto: tenta de novo sem as fotos. Sem modo JSON: pede JSON só pelo texto.
-      if (withImages && /image|vision|multimodal|content type|image_url|unsupported/i.test(detail)) {
+      if (attempt >= 2 || (err.status !== 400 && err.status !== 404)) throw e;
+      // Modelo só de texto (400, ou 404 no OpenRouter): tenta de novo sem as fotos. Sem modo JSON: pede JSON só pelo texto.
+      if (withImages && (IMAGE_REJECT.test(detail) || (err.status === 400 && /content type|unsupported/i.test(detail)))) {
         withImages = false;
         imagesIgnored = true;
-      } else if (jsonMode && /response_format|json|mime/i.test(detail)) jsonMode = false;
+      } else if (err.status === 400 && jsonMode && /response_format|json|mime/i.test(detail)) jsonMode = false;
       else throw e;
     }
   }

@@ -229,9 +229,48 @@ function decryptGroup<K extends SettingsGroup>(group: K, value: Settings[K]): Se
   return copy as Settings[K];
 }
 
+type RawRows = Partial<Record<"integrations" | "ai" | "catalog", unknown>>;
+
+/**
+ * A versão anterior guardava as chaves da Anthropic e do Google Drive em Integrações. Copia o
+ * valor (já criptografado) para "ai" e "catalog" quando lá estiver vazio e tira os campos
+ * antigos de Integrações. Devolve as linhas a gravar, ou null se não há nada a migrar.
+ */
+export function legacyKeyMoves(raw: RawRows): Record<string, Record<string, unknown>> | null {
+  const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+  const old = obj(raw.integrations);
+  if (!old || !("anthropicApiKey" in old || "googleDriveApiKey" in old)) return null;
+  const { anthropicApiKey, googleDriveApiKey, ...integrations } = old;
+  const out: Record<string, Record<string, unknown>> = { integrations };
+  const ai = obj(raw.ai);
+  if (typeof anthropicApiKey === "string" && anthropicApiKey && !ai?.anthropicKey) {
+    out.ai = { ...(ai ?? { provider: "anthropic" }), anthropicKey: anthropicApiKey };
+  }
+  const catalog = obj(raw.catalog);
+  if (typeof googleDriveApiKey === "string" && googleDriveApiKey && !catalog?.googleDriveApiKey) {
+    out.catalog = { ...catalog, googleDriveApiKey };
+  }
+  return out;
+}
+
+/** Grava a migração das chaves antigas (uma vez só) e atualiza as linhas lidas. */
+async function migrateLegacyKeys(byKey: Map<string, unknown>) {
+  const moves = legacyKeyMoves({ integrations: byKey.get("integrations"), ai: byKey.get("ai"), catalog: byKey.get("catalog") });
+  if (!moves) return;
+  await db.$transaction(
+    Object.entries(moves).map(([key, value]) => db.setting.upsert({ where: { key }, create: { key, value: value as object }, update: { value: value as object } })),
+  );
+  for (const [key, value] of Object.entries(moves)) byKey.set(key, value);
+}
+
 async function loadAll(): Promise<Settings> {
   const rows = await db.setting.findMany({ where: { key: { in: GROUPS } } });
-  const byKey = new Map(rows.map((r) => [r.key, r.value]));
+  const byKey = new Map<string, unknown>(rows.map((r) => [r.key, r.value]));
+  try {
+    await migrateLegacyKeys(byKey);
+  } catch (e) {
+    console.error("[configurações] falha ao migrar chaves antigas:", e);
+  }
   const out = {} as Record<SettingsGroup, unknown>;
   for (const g of GROUPS) out[g] = decryptGroup(g, parseGroup(g, byKey.get(g)));
   return out as Settings;
@@ -252,6 +291,11 @@ export async function saveSettingsGroup<K extends SettingsGroup>(
   group: K,
   patch: Partial<Settings[K]>,
 ): Promise<Settings[K]> {
+  if (group === "integrations") {
+    // Salvar Integrações descarta as chaves antigas: copia antes para os grupos novos.
+    const rows = await db.setting.findMany({ where: { key: { in: ["integrations", "ai", "catalog"] } } });
+    await migrateLegacyKeys(new Map(rows.map((r) => [r.key, r.value])));
+  }
   const row = await db.setting.findUnique({ where: { key: group } });
   const current = parseGroup(group, row?.value) as Record<string, unknown>; // segredos ainda criptografados
   const next: Record<string, unknown> = { ...current };

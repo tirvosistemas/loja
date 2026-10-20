@@ -48,7 +48,7 @@ const aiInput = z.object({
   provider: providerEnum,
   keys: perProvider(keyText),
   clear: perProvider(z.boolean()),
-  models: perProvider(z.string().trim().max(120, "Nome de modelo longo demais.").regex(/^[\w.:/@-]*$/, "Use só o nome do modelo, sem espaços.")),
+  models: perProvider(z.string().trim().max(120, "Nome de modelo longo demais.").regex(/^~?[\w.:/@-]*$/, "Use só o nome do modelo, sem espaços.")),
   customBaseUrl: z
     .string()
     .trim()
