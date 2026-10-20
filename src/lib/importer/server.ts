@@ -72,7 +72,7 @@ export function findBrand(name: string | null, catalog: Catalog) {
   return catalog.brands.find((b) => b.key === k) ?? null;
 }
 
-/** Produto já cadastrado com o mesmo SKU (do produto ou das variações) ou a mesma URL. */
+/** Produto já cadastrado com o mesmo SKU (do produto ou das variações), o mesmo EAN ou a mesma URL. */
 export async function findDuplicate(d: ImportDraft) {
   const skus = [d.sku, ...d.variants.map((v) => v.sku)].filter((s): s is string => !!s);
   if (skus.length) {
@@ -80,6 +80,10 @@ export async function findDuplicate(d: ImportDraft) {
       (await db.product.findFirst({ where: { sku: { in: skus } }, select: { id: true, name: true } })) ??
       (await db.productVariant.findFirst({ where: { sku: { in: skus } }, select: { product: { select: { id: true, name: true } } } }))?.product;
     if (bySku) return bySku;
+  }
+  if (d.ean) {
+    const byEan = await db.product.findFirst({ where: { ean: d.ean }, select: { id: true, name: true } });
+    if (byEan) return byEan;
   }
   const slug = slugify(d.name);
   return slug ? db.product.findUnique({ where: { slug }, select: { id: true, name: true } }) : null;
@@ -127,6 +131,13 @@ export async function ensureBrand(name: string | null, catalog: Catalog): Promis
   if (!name) return null;
   const found = findBrand(name, catalog);
   if (found) return found.id;
+  // Outra importação pode ter criado a marca depois que o catálogo foi lido.
+  // A comparação no banco ignora maiúsculas e acentos.
+  const existing = await db.brand.findFirst({ where: { name }, select: { id: true, name: true } });
+  if (existing) {
+    catalog.brands.push({ id: existing.id, name: existing.name, key: normalizeKey(existing.name) });
+    return existing.id;
+  }
   const slug = await uniqueSlug(name, async (s) => !!(await db.brand.findUnique({ where: { slug: s }, select: { id: true } })));
   try {
     const b = await db.brand.create({ data: { name, slug }, select: { id: true } });

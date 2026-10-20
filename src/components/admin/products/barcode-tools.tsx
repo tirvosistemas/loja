@@ -126,7 +126,7 @@ export function BarcodeTools({ form, onBrandCreated }: { form: FormApi; onBrandC
       const { result: b, brand, images, warnings } = r.data;
       if (brand) onBrandCreated(brand);
       const cur = form.values;
-      const patch: Partial<ProductFormValues> = { ean: code };
+      const patch: Partial<ProductFormValues> = { ean: b.ean };
       if (!cur.name.trim() && b.name) patch.name = b.name.slice(0, 160);
       if (!cur.brandId && brand) patch.brandId = brand.id;
       if (!cur.model.trim() && b.model) patch.model = b.model.slice(0, 80);

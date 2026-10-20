@@ -112,7 +112,7 @@ describe("código de barras", () => {
     expect(weightToGrams("1.2 lb")).toBe(544);
     expect(weightToGrams("500 g")).toBe(500);
     expect(dimensionsToCm("10 X 5 X 2 inches")).toEqual({ width: 25.4, height: 12.7, depth: 5.1 });
-    expect(tidyTitle("FONE DE OUVIDO BLUETOOTH JBL")).toBe("Fone De Ouvido Bluetooth Jbl");
+    expect(tidyTitle("FONE DE OUVIDO BLUETOOTH JBL")).toBe("Fone De Ouvido Bluetooth JBL");
     expect(tidyTitle("Cabo USB-C")).toBe("Cabo USB-C");
   });
 });

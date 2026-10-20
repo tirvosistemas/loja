@@ -54,7 +54,14 @@ function failImport(e: unknown, where: string): ImportResult {
 }
 
 /** Preenche com IA, se pedido e configurado. Erro na IA não impede o cadastro. */
-async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useAi: boolean, images: () => Promise<Buffer[]>, catalog: Awaited<ReturnType<typeof loadCatalog>>) {
+async function withAi(
+  build: ReturnType<typeof buildDraft>,
+  folder: string,
+  useAi: boolean,
+  images: () => Promise<Buffer[]>,
+  catalog: Awaited<ReturnType<typeof loadCatalog>>,
+  reference: string | null,
+) {
   const warnings: string[] = [];
   let draft = build.draft;
   if (!useAi) return { draft, warnings };
@@ -63,7 +70,7 @@ async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useA
   try {
     const pics = await images();
     if (!pics.length) return { draft, warnings: ["IA não usada: o produto não tem fotos."] };
-    const ai = await aiFillProduct({ config, images: pics, known: draft, folder, categories: categoryLabels(catalog) });
+    const ai = await aiFillProduct({ config, images: pics, known: draft, folder, categories: categoryLabels(catalog), reference });
     if (ai.imagesIgnored) warnings.push("O modelo de IA escolhido não lê fotos: só o texto foi usado.");
     draft = mergeAi(draft, ai.data, build.nameFromFolder);
     // O nome pode ter mudado: confere de novo se já existe.
@@ -82,28 +89,44 @@ async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useA
  * Completa pelo código de barras (Cosmos ou base gratuita) o que o dados.txt não trouxe.
  * Sem fotos próprias, baixa as da base. Erro na busca vira aviso.
  */
-async function withBarcode(build: ReturnType<typeof buildDraft>, enabled: boolean, hasPhotos: boolean) {
-  const warnings: string[] = [];
+async function withBarcode(build: ReturnType<typeof buildDraft>, opts: { barcode: boolean; useAi: boolean }, hasPhotos: boolean) {
   const d = build.draft;
-  if (!enabled || !d.ean) return { build, warnings, photoUrls: [] as string[] };
+  const none = { build, warnings: [] as string[], photoUrls: [] as string[], reference: null as string | null };
+  if (!opts.barcode || !d.ean) return none;
   try {
     const r = await lookupBarcode(d.ean, (await getSettings()).catalog.cosmosToken);
-    if (!r) return { build, warnings: [`Código ${d.ean} não encontrado nas bases.`], photoUrls: [] };
+    if (!r) return { ...none, warnings: [`Código ${d.ean} não encontrado nas bases.`] };
+    // A UPCitemdb é americana (textos em inglês): com a IA, nome, cor e descrição dela só servem de consulta.
+    const asReference = r.source === "UPCitemdb" && opts.useAi && !!(await getAiConfig());
+    const texts = asReference ? { name: null, color: null, description: null } : r;
     const draft = {
       ...d,
-      name: build.nameFromFolder && r.name ? r.name.slice(0, 160) : d.name,
+      ean: r.ean,
+      name: build.nameFromFolder && texts.name ? texts.name.slice(0, 160) : d.name,
       brand: d.brand ?? r.brand,
       model: d.model ?? r.model,
-      color: d.color ?? r.color,
-      description: d.description ?? r.description,
+      color: d.color ?? texts.color,
+      description: d.description ?? texts.description,
       weightGrams: d.weightGrams ?? r.weightGrams,
       widthCm: d.widthCm ?? r.widthCm,
       heightCm: d.heightCm ?? r.heightCm,
       depthCm: d.depthCm ?? r.depthCm,
     };
-    return { build: { ...build, draft, nameFromFolder: build.nameFromFolder && !r.name }, warnings, photoUrls: hasPhotos ? [] : r.images.slice(0, 3) };
+    // Nome ou código mudou: confere de novo se já existe.
+    if (draft.name !== d.name || draft.ean !== d.ean) {
+      const dup = await findDuplicate(draft);
+      if (dup) throw new ImportError(`Já existe na loja: ${dup.name}.`, dup);
+    }
+    const reference = asReference ? [r.name && `nome: ${r.name}`, r.color && `cor: ${r.color}`, r.description && `descrição: ${r.description.slice(0, 2000)}`].filter(Boolean).join("\n") : "";
+    return {
+      build: { ...build, draft, nameFromFolder: build.nameFromFolder && !texts.name },
+      warnings: [],
+      photoUrls: hasPhotos ? [] : r.images.slice(0, 3),
+      reference: reference || null,
+    };
   } catch (e) {
-    return { build, warnings: [e instanceof BarcodeError ? e.message : "Busca pelo código de barras falhou."], photoUrls: [] };
+    if (e instanceof ImportError) throw e;
+    return { ...none, warnings: [e instanceof BarcodeError ? e.message : "Busca pelo código de barras falhou."] };
   }
 }
 
@@ -272,7 +295,7 @@ export async function importDrive(folder: { id: string; name: string }, options:
     const first = buildDraft(folder.name, p.dadosText);
     await assertImportable(first);
     const warnings: string[] = [];
-    const bc = await withBarcode(first, o.data.barcode, p.photos.length > 0);
+    const bc = await withBarcode(first, o.data, p.photos.length > 0);
     const build = bc.build;
     const photos = [...(await saveBuffers(p.photos.map((ph) => ({ label: ph.name, load: () => downloadFile(ph, key) })), warnings)), ...(await barcodePhotos(bc.photoUrls, warnings))];
     saved = photos.map((x) => x.saved);
@@ -283,10 +306,11 @@ export async function importDrive(folder: { id: string; name: string }, options:
       o.data.useAi,
       async () => (p.info.length ? mapLimit(p.info.slice(0, MAX_AI_IMAGES), 3, (x) => downloadFile(x, key)) : photos.slice(0, 4).map((x) => x.buf)),
       catalog,
+      bc.reference,
     );
-    saved = [...saved, ...(await withStandard(saved, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
-    const final = saved.filter((x) => !saved.some((y) => y.sourceUrl === x.url));
-    const r = await saveImported(ai.draft, final, o.data, catalog);
+    // Cada foto padronizada fica no lugar da original (que segue em sourceUrl, para a limpeza).
+    saved = await withStandard(saved, o.data.standardize, warnings);
+    const r = await saveImported(ai.draft, saved, o.data, catalog);
     return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
     await deleteUnusedUploads(saved.flatMap((s) => [s.url, s.sourceUrl]));
@@ -309,7 +333,7 @@ export async function importFromUrls(item: z.input<typeof urlItem>, options: Imp
     const first = buildDraft(it.data.folder, it.data.dadosText);
     await assertImportable(first);
     const warnings: string[] = [];
-    const bc = await withBarcode(first, o.data.barcode, it.data.photoUrls.length > 0);
+    const bc = await withBarcode(first, o.data, it.data.photoUrls.length > 0);
     const build = bc.build;
     const photos = [
       ...(await saveBuffers(
@@ -320,10 +344,9 @@ export async function importFromUrls(item: z.input<typeof urlItem>, options: Imp
     ];
     saved = photos.map((x) => x.saved);
     const catalog = await loadCatalog();
-    const ai = await withAi(build, it.data.folder, o.data.useAi, async () => photos.slice(0, 4).map((x) => x.buf), catalog);
-    saved = [...saved, ...(await withStandard(saved, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
-    const final = saved.filter((x) => !saved.some((y) => y.sourceUrl === x.url));
-    const r = await saveImported(ai.draft, final, o.data, catalog);
+    const ai = await withAi(build, it.data.folder, o.data.useAi, async () => photos.slice(0, 4).map((x) => x.buf), catalog, bc.reference);
+    saved = await withStandard(saved, o.data.standardize, warnings);
+    const r = await saveImported(ai.draft, saved, o.data, catalog);
     return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
     await deleteUnusedUploads(saved.flatMap((s) => [s.url, s.sourceUrl]));
@@ -369,7 +392,7 @@ export async function importUploaded(item: z.input<typeof uploadedItem>, options
     const first = buildDraft(it.data.folder, it.data.dadosText);
     await assertImportable(first);
     const warnings: string[] = [];
-    const bc = await withBarcode(first, o.data.barcode, images.length > 0);
+    const bc = await withBarcode(first, o.data, images.length > 0);
     const build = bc.build;
     images = [...images, ...(await barcodePhotos(bc.photoUrls, warnings)).map((x) => x.saved)];
     const catalog = await loadCatalog();
@@ -379,10 +402,10 @@ export async function importUploaded(item: z.input<typeof uploadedItem>, options
       o.data.useAi,
       async () => (await Promise.all((aiImages.length ? aiImages : images.slice(0, 4).map((x) => x.url)).map(readLarge))).filter((b) => b != null),
       catalog,
+      bc.reference,
     );
-    images = [...images, ...(await withStandard(images, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
-    const final = images.filter((x) => !images.some((y) => y.sourceUrl === x.url));
-    const r = await saveImported(ai.draft, final, o.data, catalog);
+    images = await withStandard(images, o.data.standardize, warnings);
+    const r = await saveImported(ai.draft, images, o.data, catalog);
     return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
     await deleteUnusedUploads(images.flatMap((s) => [s.url, s.sourceUrl]));
