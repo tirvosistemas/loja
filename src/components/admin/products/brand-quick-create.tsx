@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -76,5 +77,38 @@ export function BrandQuickCreate({ open, onClose, onCreated }: { open: boolean; 
         />
       </Field>
     </Dialog>
+  );
+}
+
+/** Marca sugerida pela IA ou pelo código de barras. Só é cadastrada se o dono clicar. */
+export function BrandSuggestion({ name, onCreated }: { name: string; onCreated: (brand: { id: string; name: string }) => void }) {
+  const [pending, start] = useTransition();
+
+  const create = () =>
+    start(async () => {
+      let r: Awaited<ReturnType<typeof quickCreateBrand>>;
+      try {
+        r = await quickCreateBrand(name);
+      } catch {
+        toast.error("Falha de conexão. Tente de novo.");
+        return;
+      }
+      if (!r.ok) {
+        toast.error(r.fieldErrors?.name ?? r.error);
+        return;
+      }
+      if (r.data) onCreated(r.data);
+      toast.success(r.message ?? "Marca cadastrada.");
+    });
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border-strong px-3 py-2 text-[13px]">
+      <p className="min-w-0 text-muted-foreground">
+        Sugestão: <span className="font-medium text-foreground">{name}</span> (ainda não cadastrada)
+      </p>
+      <Button type="button" size="sm" variant="secondary" loading={pending} onClick={create}>
+        <Plus aria-hidden /> Criar marca
+      </Button>
+    </div>
   );
 }

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { pluralize } from "@/lib/format";
+import { slugify } from "@/lib/utils";
 import type { BrandOption, CategoryOption } from "@/lib/admin/catalog";
 import { aiFillAction, type AiFillResult } from "@/app/admin/(panel)/produtos/tools-actions";
 import { rowKey, type ProductFormValues } from "./form-values";
@@ -28,7 +29,7 @@ export function mergeAiFill(v: ProductFormValues, r: AiFillResult, rewrite: bool
   text("metaDescription", f.metaDescription, 320, true);
   text("model", f.model, 80, false);
   text("color", f.color, 60, false);
-  if (!v.brandId && r.brand) patch.brandId = r.brand.id;
+  if (!v.brandId && r.brand?.id) patch.brandId = r.brand.id;
   if (!v.categoryId && r.categoryId) patch.categoryId = r.categoryId;
   if (!v.specs.length && f.specs.length) patch.specs = f.specs.filter((s) => s.label.trim() && s.value.trim()).slice(0, 60).map((s) => ({ key: rowKey(), label: s.label.trim().slice(0, 60), value: s.value.trim().slice(0, 300) }));
   if (!v.voltage && f.voltage) patch.voltage = f.voltage;
@@ -42,7 +43,10 @@ export function mergeAiFill(v: ProductFormValues, r: AiFillResult, rewrite: bool
   if (!v.ean && ean.length >= 8 && ean.length <= 14) patch.ean = ean;
   const tags = f.tags.map((t) => t.trim().toLowerCase().slice(0, 40)).filter(Boolean).slice(0, 8);
   if (tags.length && (rewrite || !v.tags.length)) patch.tags = tags;
-  return { patch, count: Object.keys(patch).length };
+  const count = Object.keys(patch).length;
+  // Produto novo: a URL acompanha o nome, como quando ele é digitado.
+  if (patch.name && v.slugAuto) patch.slug = slugify(patch.name);
+  return { patch, count };
 }
 
 export function AiFillButton({
@@ -50,13 +54,13 @@ export function AiFillButton({
   aiName,
   categories,
   brands,
-  onBrandCreated,
+  onBrandFound,
 }: {
   form: FormApi;
   aiName: string | null;
   categories: CategoryOption[];
   brands: BrandOption[];
-  onBrandCreated: (b: { id: string; name: string }) => void;
+  onBrandFound: (b: { id: string | null; name: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -92,11 +96,13 @@ export function AiFillButton({
         toast.error(r.ok ? "A IA não respondeu." : r.error);
         return;
       }
-      if (r.data.brand) onBrandCreated(r.data.brand);
+      const { brand } = r.data;
+      if (brand) onBrandFound(brand);
       const { patch, count } = mergeAiFill(form.values, r.data, rewrite);
       form.patch(patch);
       setOpen(false);
       r.data.warnings.forEach((w) => toast.warning(w));
+      if (brand && !brand.id) toast.info(`A marca ${brand.name} ainda não está cadastrada. Crie com um clique no campo Marca.`);
       toast.success(count ? `A IA preencheu ${pluralize(count, "campo", "campos")}. Revise antes de salvar.` : "A IA não encontrou nada novo para preencher.");
     });
 

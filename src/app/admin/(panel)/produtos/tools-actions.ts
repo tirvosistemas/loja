@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { fail, type ActionResult } from "@/lib/action";
 import { isUploadKey } from "@/lib/images";
@@ -11,14 +12,23 @@ import { aiErrorMessage, getAiConfig } from "@/lib/ai/client";
 import { aiFillProduct, type ProductAiFill } from "@/lib/ai/product";
 import { BarcodeError, lookupBarcode, type BarcodeResult } from "@/lib/barcode";
 import { fetchImage } from "@/lib/importer/fetch-image";
-import { categoryLabels, ensureBrand, findBrand, findCategory, loadCatalog } from "@/lib/importer/server";
+import { categoryLabels, findBrand, findCategory, loadCatalog, type Catalog } from "@/lib/importer/server";
 import { readPhoto } from "@/lib/photos";
 import { pluralize } from "@/lib/format";
 import { photoStandard, standardizeImage, standardizeProducts, type StdImage } from "@/lib/admin/standardize";
 
 // Ferramentas do cadastro de produto: preencher com IA e buscar pelo código de barras.
 
-type BrandRef = { id: string; name: string } | null;
+// id null = marca ainda não cadastrada: o formulário só sugere, quem cria é o dono.
+type BrandRef = { id: string | null; name: string } | null;
+
+/** Marca já cadastrada (sem diferenciar maiúsculas e acentos) ou só o nome sugerido. Não cria nada. */
+function brandRef(raw: string | null, catalog: Catalog): BrandRef {
+  const name = raw?.trim().slice(0, 80);
+  if (!name) return null;
+  const found = findBrand(name, catalog);
+  return found ? { id: found.id, name: found.name } : { id: null, name };
+}
 
 const knownSchema = z.object({
   name: z.string().max(200),
@@ -70,12 +80,7 @@ export async function aiFillAction(input: { known: z.input<typeof knownSchema>; 
     const warnings: string[] = [];
     if (r.imagesIgnored) warnings.push("O modelo escolhido não lê fotos: só o texto foi usado.");
     const category = findCategory(r.data.category, catalog);
-    let brand: BrandRef = null;
-    if (!k.brand && r.data.brand?.trim()) {
-      const name = r.data.brand.trim().slice(0, 80);
-      const id = findBrand(name, catalog)?.id ?? (await ensureBrand(name, catalog));
-      if (id) brand = { id, name: catalog.brands.find((b) => b.id === id)?.name ?? name };
-    }
+    const brand = k.brand ? null : brandRef(r.data.brand, catalog);
     return { ok: true, data: { fill: r.data, categoryId: category?.id ?? null, brand, warnings, model: r.model } };
   } catch (e) {
     console.error("[produto] IA:", e);
@@ -83,23 +88,34 @@ export async function aiFillAction(input: { known: z.input<typeof knownSchema>; 
   }
 }
 
-export type BarcodeLookupResult = { result: BarcodeResult; brand: BrandRef; images: { url: string; width: number; height: number }[]; warnings: string[] };
+export type BarcodeLookupResult = {
+  result: BarcodeResult;
+  brand: BrandRef;
+  existing: { id: string; name: string } | null; // outro produto da loja com o mesmo código
+  images: { url: string; width: number; height: number }[];
+  warnings: string[];
+};
 
-export async function barcodeLookupAction(ean: string, maxImages: number): Promise<ActionResult<BarcodeLookupResult>> {
+/** `currentId`: o produto em edição, que não conta como repetido. */
+export async function barcodeLookupAction(ean: string, maxImages: number, currentId?: string | null): Promise<ActionResult<BarcodeLookupResult>> {
   await requireAdmin();
   const code = String(ean ?? "").replace(/\D/g, "").slice(0, 14);
   const limit = Math.max(0, Math.min(6, Math.trunc(Number(maxImages) || 0)));
+  const selfId = typeof currentId === "string" && currentId ? currentId.slice(0, 40) : null;
   try {
     const { catalog: cfg } = await getSettings();
     const result = await lookupBarcode(code, cfg.cosmosToken);
-    if (!result) return fail("Código não encontrado nas bases. Preencha à mão ou use a IA com fotos da caixa.");
-    const warnings: string[] = [];
-    let brand: BrandRef = null;
-    if (result.brand) {
-      const catalog = await loadCatalog();
-      const id = findBrand(result.brand, catalog)?.id ?? (await ensureBrand(result.brand, catalog));
-      if (id) brand = { id, name: catalog.brands.find((b) => b.id === id)?.name ?? result.brand };
+    const eans = [...new Set([code, result?.ean ?? ""])].filter(Boolean);
+    const existing = await db.product.findFirst({ where: { ean: { in: eans }, ...(selfId ? { id: { not: selfId } } : {}) }, select: { id: true, name: true } });
+    if (!result) {
+      return fail(
+        existing
+          ? `Código não encontrado nas bases, mas já está cadastrado na loja: ${existing.name}.`
+          : "Código não encontrado nas bases. Preencha à mão ou use a IA com fotos da caixa.",
+      );
     }
+    const warnings: string[] = [];
+    const brand = result.brand ? brandRef(result.brand, await loadCatalog()) : null;
     const images: BarcodeLookupResult["images"] = [];
     for (const url of result.images.slice(0, limit)) {
       try {
@@ -109,7 +125,7 @@ export async function barcodeLookupAction(ean: string, maxImages: number): Promi
         warnings.push("Uma foto da base não pôde ser baixada.");
       }
     }
-    return { ok: true, data: { result, brand, images, warnings } };
+    return { ok: true, data: { result, brand, existing, images, warnings } };
   } catch (e) {
     if (e instanceof BarcodeError) return fail(e.message);
     console.error("[produto] código de barras:", e);

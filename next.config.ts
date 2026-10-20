@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
 
+const permissions = (camera: string) => ({ key: "Permissions-Policy", value: `camera=${camera}, microphone=(), geolocation=(self)` });
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+  permissions("()"),
   // Política mínima: não restringe scripts (Stripe, Analytics, Pixel), só bloqueia o site
   // dentro de iframes de terceiros, troca de <base> e plugins.
   { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
@@ -19,6 +21,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      // O painel lê código de barras pela câmera. A regra que vem depois substitui a de cima.
+      { source: "/admin/:path*", headers: [permissions("(self)")] },
       {
         source: "/sw.js",
         headers: [
