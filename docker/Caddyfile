@@ -12,10 +12,20 @@
 	# (cada arquivo tem nome único e nunca muda depois de salvo).
 	handle /uploads/* {
 		root * /srv
-		header Cache-Control "public, max-age=31536000, immutable"
-		header X-Content-Type-Options "nosniff"
-		file_server {
-			hide .*
+		# .jpg do catálogo da Meta que ainda não existe: o app gera a partir do .webp.
+		@jpegMissing {
+			path *.jpg
+			not file
+		}
+		handle @jpegMissing {
+			reverse_proxy app:3000
+		}
+		handle {
+			header Cache-Control "public, max-age=31536000, immutable"
+			header X-Content-Type-Options "nosniff"
+			file_server {
+				hide .*
+			}
 		}
 	}
 

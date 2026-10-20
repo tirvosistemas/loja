@@ -103,7 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           initial={{ ...c, googleDriveApiKey: "", clearGoogleDriveApiKey: false, cosmosToken: "", clearCosmosToken: false }}
           previews={{ googleDriveApiKey: maskSecret(googleDriveApiKey), cosmosToken: maskSecret(cosmosToken) }}
           brandLogos={BRAND_WATERMARKS}
-          feedUrls={{ google: absoluteUrl("/feeds/google.xml"), csv: absoluteUrl("/feeds/catalogo.csv") }}
+          feedUrls={{ google: absoluteUrl("/feeds/google.xml"), meta: absoluteUrl("/feeds/meta.csv"), csv: absoluteUrl("/feeds/catalogo.csv") }}
         />
       );
       break;

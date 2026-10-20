@@ -112,7 +112,7 @@ export function LegalGenerator({ pages, existing, missing }: { pages: { id: Lega
               <NumberInput integer min={90} max={365} value={defectDays} onChange={setDefectDays} suffix="dias" />
             </label>
           </div>
-          <p className="text-xs text-subtle">Mínimos da lei: 7 dias de arrependimento e 90 dias para defeito em produtos duráveis.</p>
+          <p className="text-xs text-subtle">Mínimos da lei: 7 dias de arrependimento e 90 dias para defeito em produtos duráveis (30 dias nos não duráveis).</p>
           {willReplace && (
             <Switch checked={overwrite} onChange={setOverwrite} label="Substituir as páginas que já existem" description="Desligado, as que já existem ficam como estão." />
           )}

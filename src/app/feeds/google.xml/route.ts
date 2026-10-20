@@ -1,7 +1,7 @@
 import { feedEnabled, feedXml, loadFeedItems } from "@/lib/feed";
 import { getSettings } from "@/lib/settings";
 
-// Catálogo para Google Merchant Center e Meta (formato RSS 2.0 com campos g:).
+// Catálogo para o Google Merchant Center (formato RSS 2.0 com campos g:).
 export const dynamic = "force-dynamic";
 
 export async function GET() {

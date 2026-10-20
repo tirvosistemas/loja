@@ -1,6 +1,7 @@
 import { formatBRL, formatCep, formatPhone } from "./format";
 import { freeShippingMinimum, freeShippingRule, freeShippingWhere } from "./shipping/free";
 import { enabledPaymentMethods, stripeIsReady, type Settings } from "./settings";
+import { PIX_METHODS } from "./constants";
 
 // Páginas legais geradas com os dados reais da loja (Configurações): trocas (CDC), privacidade
 // (LGPD), termos de uso e entregas. Texto de base, revisável no painel; não substitui um advogado.
@@ -56,7 +57,13 @@ function paymentList(s: Settings) {
   if (methods.includes("PIX_MANUAL")) out.push("- **Pix para a chave da loja:** pagamento na hora, com envio do comprovante pelo WhatsApp.");
   const onDelivery = [methods.includes("CASH_ON_DELIVERY") && "dinheiro", methods.includes("CARD_ON_DELIVERY") && "cartão na maquininha", methods.includes("PIX_ON_DELIVERY") && "Pix"].filter(Boolean);
   if (onDelivery.length) out.push(`- **Na entrega:** ${onDelivery.join(", ")}.`);
-  if (s.payment.pixDiscountPercent > 0) out.push(`- Pagamentos com Pix têm **${s.payment.pixDiscountPercent.toLocaleString("pt-BR")}% de desconto**, aplicado no checkout.`);
+  // O desconto vale só para o Pix da chave da loja e o Pix na entrega (igual ao checkout).
+  const pixLabel: Record<string, string> = { PIX_MANUAL: "Pix para a chave da loja", PIX_ON_DELIVERY: "Pix na entrega" };
+  const withDiscount = PIX_METHODS.filter((m) => methods.includes(m)).map((m) => pixLabel[m]);
+  if (s.payment.pixDiscountPercent > 0 && withDiscount.length)
+    out.push(
+      `- ${withDiscount.join(" e ")} ${withDiscount.length > 1 ? "têm" : "tem"} **${s.payment.pixDiscountPercent.toLocaleString("pt-BR")}% de desconto**, aplicado no checkout${methods.includes("ONLINE_STRIPE") ? " (não vale para o Pix do pagamento online)" : ""}.`,
+    );
   return out.join("\n");
 }
 
@@ -75,16 +82,16 @@ Em compras feitas pela internet, você pode desistir em até **${o.returnDays} d
 
 ## Produto com defeito
 
-Você tem **${o.defectDays} dias** para reclamar de defeitos em produtos duráveis (art. 26 do CDC), além da garantia do fabricante informada na página de cada produto.
+Você pode reclamar de defeitos em até **30 dias** (produtos não duráveis) ou **${o.defectDays} dias** (produtos duráveis) a partir do recebimento (art. 26 do CDC), além da garantia do fabricante informada na página de cada produto. Se o defeito só se manifestar com o uso (vício oculto), o prazo conta a partir de quando ele aparecer (art. 26, §3º).
 
 1. Fale com a gente ${contactLine(s)}, com fotos ou vídeo do problema.
-2. Defeitos nos primeiros ${o.returnDays} dias: trocamos direto com a loja.
-3. Depois disso, orientamos o acionamento da assistência técnica autorizada, que tem até 30 dias para resolver.
-4. Se não for resolvido nesse prazo, você escolhe: troca por outro igual, devolução do valor ou abatimento no preço (art. 18 do CDC).
+2. Você pode entregar o produto à loja, que o encaminha à assistência técnica, ou levá-lo direto à assistência autorizada do fabricante.
+3. O conserto deve ser feito em até 30 dias.
+4. Se não for resolvido nesse prazo, você escolhe: troca por outro igual, devolução do valor ou abatimento no preço (art. 18, §1º, do CDC).
 
 ## Avaria no transporte
 
-Confira o produto ao receber. Se a embalagem estiver danificada, recuse a entrega e avise na hora. Se perceber o dano depois, fale com a gente em até ${o.returnDays} dias, com fotos.
+Confira o produto ao receber. Se a embalagem estiver danificada, recuse a entrega e avise na hora. Se perceber o dano depois, fale com a gente, com fotos, em até 30 dias (produtos não duráveis) ou ${o.defectDays} dias (duráveis) a partir do recebimento.
 
 ## Prazo de resposta
 
@@ -120,17 +127,27 @@ Compartilhamos dados apenas com quem precisa deles para concluir a compra: ${par
 
 ## Cookies
 
-Usamos cookies e o armazenamento do navegador para manter o carrinho, os favoritos e as suas preferências.${analytics.length ? ` Também usamos ${analytics.join(" e ")} para medir visitas e anúncios; você pode bloquear esses cookies nas configurações do navegador.` : ""}
+Usamos cookies e o armazenamento do navegador para manter o carrinho, os favoritos e as suas preferências.${analytics.length ? ` Também usamos ${analytics.join(" e ")} para medir visitas e anúncios, só depois que você clica em **Aceitar** no aviso de cookies. Para mudar a escolha, apague os dados deste site nas configurações do navegador.` : ""}
 
 ## Seus direitos
 
-Você pode pedir a qualquer momento: confirmação do tratamento, acesso, correção, anonimização, portabilidade ou exclusão dos seus dados e a revogação de consentimentos (art. 18 da LGPD). Alguns dados precisam ser guardados pelo prazo exigido em lei, como os de notas fiscais.
+A qualquer momento, você pode pedir (art. 18 da LGPD):
+
+- confirmação de que tratamos seus dados e acesso a eles;
+- correção de dados incompletos, errados ou desatualizados;
+- anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desacordo com a lei;
+- portabilidade dos dados para outro fornecedor;
+- eliminação dos dados tratados com o seu consentimento e revogação do consentimento;
+- informação sobre com quem compartilhamos seus dados;
+- informação sobre a possibilidade de não dar o consentimento e o que acontece se você não der.
+
+Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD). Alguns dados precisam ser guardados pelo prazo exigido em lei, como os de notas fiscais.
 
 ## Segurança e retenção
 
 O site usa conexão criptografada (HTTPS), o acesso ao painel é restrito e protegido por senha e os dados ficam guardados só pelo tempo necessário para as finalidades acima.
 
-## Contato do encarregado
+## Canal de atendimento ao titular (LGPD)
 
 Para exercer seus direitos ou tirar dúvidas sobre privacidade, fale com a gente ${contactLine(s)}.
 
@@ -230,6 +247,6 @@ export function legalMissing(s: Settings) {
   if (!s.store.legalName) out.push("razão social");
   if (!s.store.cnpj) out.push("CNPJ");
   if (!s.address.street) out.push("endereço");
-  if (!s.store.email && !s.store.whatsapp) out.push("e-mail ou WhatsApp");
+  if (!s.store.email) out.push("e-mail"); // Decreto 7.962/2013, art. 2º, II: endereço eletrônico
   return out;
 }

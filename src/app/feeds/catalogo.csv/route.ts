@@ -1,6 +1,6 @@
 import { feedCsv, feedEnabled, loadFeedItems } from "@/lib/feed";
 
-// Mesmo catálogo do XML, em CSV (aceito pelo Gerenciador de Comércio da Meta e pelo Merchant Center).
+// Mesmo catálogo do XML do Google, em planilha (CSV). Para a Meta, use /feeds/meta.csv.
 export const dynamic = "force-dynamic";
 
 export async function GET() {

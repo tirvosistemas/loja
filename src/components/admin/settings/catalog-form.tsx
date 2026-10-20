@@ -57,7 +57,7 @@ export function CatalogForm({
   initial: CatalogFormValues;
   previews: CatalogPreviews;
   brandLogos: readonly { value: string; label: string }[];
-  feedUrls: { google: string; csv: string };
+  feedUrls: { google: string; meta: string; csv: string };
 }) {
   const [previews, setPreviews] = useState(initialPreviews);
   const f = useSettingsForm(initial, saveCatalogSettings, {
@@ -375,8 +375,9 @@ export function CatalogForm({
         {v.feedEnabled && (
           <div className="space-y-3">
             {[
-              { label: "Google Merchant Center e Meta (XML)", url: feedUrls.google },
-              { label: "Planilha (CSV)", url: feedUrls.csv },
+              { label: "Google Merchant Center (XML)", url: feedUrls.google },
+              { label: "Instagram e Facebook (Meta)", url: feedUrls.meta },
+              { label: "Planilha para conferir (CSV)", url: feedUrls.csv },
             ].map((x) => (
               <div key={x.url}>
                 <p className="mb-1.5 text-sm font-medium">{x.label}</p>
@@ -389,7 +390,7 @@ export function CatalogForm({
             <Callout title="Como usar">
               <strong className="font-medium text-foreground">Google:</strong> no Merchant Center, Produtos → Fontes de dados → Adicionar → “Arquivo de um URL”, cole o link XML e escolha
               atualização diária. <strong className="font-medium text-foreground">Instagram/Facebook:</strong> no Gerenciador de Comércio, Catálogo → Fontes de dados → Feed de dados → URL, cole
-              o mesmo link. Só aparecem produtos ativos, com foto e preço.
+              o link da Meta. Só aparecem produtos ativos, com foto e preço.
             </Callout>
           </div>
         )}

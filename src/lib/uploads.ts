@@ -1,5 +1,5 @@
 import path from "node:path";
-import { mkdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import sharp, { type Metadata as SharpMetadata } from "sharp";
 import { IMAGE_WIDTHS, isUploadKey, type ImageSize } from "./images";
 import { randomCode } from "./utils";
@@ -62,7 +62,29 @@ export async function deleteImage(key: string | null | undefined) {
   if (!key || !isUploadKey(key)) return;
   const base = resolveUploadPath(key.replace(/^\/uploads\//, ""));
   if (!base) return;
-  await Promise.all((Object.keys(IMAGE_WIDTHS) as ImageSize[]).map((s) => rm(/*turbopackIgnore: true*/ `${base}-${s}.webp`, { force: true })));
+  // Também o .jpg gerado para o catálogo da Meta (jpegFromWebp).
+  const files = (Object.keys(IMAGE_WIDTHS) as ImageSize[]).flatMap((s) => [`${base}-${s}.webp`, `${base}-${s}.jpg`]);
+  await Promise.all(files.map((f) => rm(/*turbopackIgnore: true*/ f, { force: true })));
+}
+
+/**
+ * Gera "<nome>.jpg" a partir do "<nome>.webp" enviado (a Meta não aceita WebP no catálogo).
+ * Converte uma vez só: o .jpg fica salvo ao lado. Devolve false se não houver o .webp.
+ */
+export async function jpegFromWebp(relative: string): Promise<boolean> {
+  if (!relative.endsWith(".jpg")) return false;
+  const full = resolveUploadPath(relative);
+  const source = resolveUploadPath(`${relative.slice(0, -4)}.webp`);
+  if (!full || !source) return false;
+  const tmp = `${full}.${randomCode(6).toLowerCase()}.tmp`;
+  try {
+    await sharp(source, { failOn: "error" }).flatten({ background: "#ffffff" }).jpeg({ quality: 85 }).toFile(tmp);
+    await rename(/*turbopackIgnore: true*/ tmp, full);
+    return true;
+  } catch {
+    await rm(/*turbopackIgnore: true*/ tmp, { force: true }).catch(() => null);
+    return false;
+  }
 }
 
 /** Caminho absoluto dentro de UPLOAD_DIR, ou null se tentar sair dele. */
