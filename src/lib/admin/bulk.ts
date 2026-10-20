@@ -239,7 +239,8 @@ export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup
           const exportedRaw = exportedIdx >= 0 ? (cells[exportedIdx] ?? "").trim() : "";
           const exported = exportedRaw ? readInt(exportedRaw, !!opts.numeric?.[i]?.[exportedIdx]) : null;
           if (exported == null) row.stock = n; // planilha sem a coluna (antiga): valor absoluto
-          else if (n !== exported) {
+          // Estoque já igual ao da planilha: ela já foi aplicada (mesmo arquivo enviado de novo).
+          else if (n !== exported && n !== base.stock) {
             row.stock = Math.max(0, base.stock + n - exported);
             if (base.stock !== exported) notes.push(`${line}: o estoque mudou de ${exported} para ${base.stock} desde a exportação; apliquei só a mudança da planilha (${n > exported ? "+" : ""}${n - exported}) e ficou ${row.stock}.`);
           }

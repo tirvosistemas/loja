@@ -200,6 +200,14 @@ describe("planilha: estoque na exportação (K3)", () => {
     expect(viaXlsx([row({ stock: 3 })], cells).rows[0].stock).toBe(0); // não fica negativo
   });
 
+  it("a mesma planilha enviada de novo não desconta o estoque duas vezes", () => {
+    const cells = rowsToSheet(exported, lookup);
+    cells[1][STOCK] = 7;
+    const r = viaXlsx([row({ stock: 7 })], cells); // a primeira importação já deixou 7
+    expect(r.rows[0].stock).toBe(7);
+    expect(r.notes).toEqual([]);
+  });
+
   it("planilha antiga, sem a coluna, usa o valor absoluto", () => {
     const cells = rowsToSheet(exported, lookup).map((r) => r.slice(0, -1));
     cells[1][STOCK] = 12;
