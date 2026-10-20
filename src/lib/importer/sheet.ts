@@ -69,6 +69,11 @@ function colIndex(ref: string) {
 
 /** Primeira aba (ou a que tiver mais linhas preenchidas, entre as primeiras). */
 export function parseXlsx(data: Uint8Array): SheetRow[] {
+  return readXlsx(data).rows;
+}
+
+/** Como parseXlsx, e diz quais células são número (no .xlsx o número vem sempre com ponto decimal: "21.989"). */
+export function readXlsx(data: Uint8Array): { rows: SheetRow[]; numeric: boolean[][] } {
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(data, { filter: (f) => f.name.startsWith("xl/") && (f.name.endsWith(".xml") || f.name.endsWith(".rels")) });
@@ -89,8 +94,10 @@ export function parseXlsx(data: Uint8Array): SheetRow[] {
 
   const parsed = sheets.slice(0, 5).map((path) => {
     const rows: SheetRow[] = [];
+    const numeric: boolean[][] = [];
     for (const r of read(path).matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
       const row: string[] = [];
+      const nums: boolean[] = [];
       for (const c of (r[1] ?? "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
         const attrs = c[1];
         const body = c[2] ?? "";
@@ -104,13 +111,16 @@ export function parseXlsx(data: Uint8Array): SheetRow[] {
         else if (v != null) value = decodeXml(v);
         const idx = ref ? colIndex(ref) : row.length;
         row[idx] = value.trim();
+        nums[idx] = (!type || type === "n") && v != null;
       }
       rows.push(Array.from(row, (x) => x ?? ""));
+      numeric.push(Array.from(nums, (x) => !!x));
     }
-    return rows;
+    return { rows, numeric };
   });
   // A planilha da Shopee tem abas de instruções: fica a aba com mais linhas preenchidas.
-  return parsed.sort((a, b) => b.filter((r) => r.some(Boolean)).length - a.filter((r) => r.some(Boolean)).length)[0] ?? [];
+  const filled = (rows: SheetRow[]) => rows.filter((r) => r.some(Boolean)).length;
+  return parsed.sort((a, b) => filled(b.rows) - filled(a.rows))[0] ?? { rows: [], numeric: [] };
 }
 
 // ─────────────── Colunas

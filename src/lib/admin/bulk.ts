@@ -1,5 +1,6 @@
 import { normalizeKey, parseInteger, parseMoney, parseNumber, parseWeight, parseYesNo } from "@/lib/importer/dados";
 import type { SheetRow } from "@/lib/importer/sheet";
+import { isValidGtin } from "@/lib/barcode";
 
 // Edição em massa e planilha de exportação/atualização. Arquivo puro: usado na página de
 // edição (navegador) e na rota de exportação (servidor). Uma linha por produto e, logo
@@ -45,7 +46,9 @@ export const STATUS_LABEL: Record<BulkStatus, string> = { ACTIVE: "Ativo", DRAFT
 
 // ───────── Planilha
 
-export const SHEET_COLUMNS: { field: BulkField | "productId" | "variantId"; header: string }[] = [
+type SheetField = BulkField | "productId" | "variantId" | "stockBase";
+
+export const SHEET_COLUMNS: { field: SheetField; header: string }[] = [
   { field: "productId", header: "ID" },
   { field: "variantId", header: "ID da variação" },
   { field: "name", header: "Nome" },
@@ -63,31 +66,33 @@ export const SHEET_COLUMNS: { field: BulkField | "productId" | "variantId"; head
   { field: "depthCm", header: "Profundidade (cm)" },
   { field: "freeShipping", header: "Frete grátis" },
   { field: "ean", header: "EAN" },
+  // Na volta, só a diferença entre "Estoque" e esta coluna é aplicada: vendas feitas depois da exportação não se perdem.
+  { field: "stockBase", header: "Estoque na exportação (não editar)" },
 ];
 
 export type SheetCell = string | number | null;
 export type Lookup = { categories: { id: string; label: string }[]; brands: { id: string; name: string }[] };
 
-/** Linhas da planilha (cabeçalho + dados). Dinheiro em reais, como número. */
-export function rowsToSheet(rows: BulkRow[], lookup: Lookup): SheetCell[][] {
+/** Linhas da planilha (aviso opcional + cabeçalho + dados). Dinheiro em reais, como número. */
+export function rowsToSheet(rows: BulkRow[], lookup: Lookup, note?: string): SheetCell[][] {
   const cat = new Map(lookup.categories.map((c) => [c.id, c.label]));
   const brand = new Map(lookup.brands.map((b) => [b.id, b.name]));
   const money = (c: number | null) => (c == null ? null : c / 100);
   const out: SheetCell[][] = [SHEET_COLUMNS.map((c) => c.header)];
+  if (note) out.unshift(SHEET_COLUMNS.map((_, i) => (i ? null : note)));
   for (const r of rows) {
     const v = !!r.variantId;
     out.push(
       SHEET_COLUMNS.map(({ field }) => {
         if (field === "productId") return r.productId;
         if (field === "variantId") return r.variantId;
+        if (field === "stock" || field === "stockBase") return !v && r.hasVariants ? null : r.stock;
         if (v && !VARIANT_FIELDS.includes(field)) return null;
         switch (field) {
           case "priceCents":
           case "compareAtCents":
           case "costCents":
             return money(r[field]);
-          case "stock":
-            return !v && r.hasVariants ? null : r.stock;
           case "categoryId":
             return cat.get(r.categoryId) ?? null;
           case "brandId":
@@ -107,13 +112,15 @@ export function rowsToSheet(rows: BulkRow[], lookup: Lookup): SheetCell[][] {
 
 export function sheetToCsv(cells: SheetCell[][]): string {
   const esc = (c: SheetCell) => {
-    const s = c == null ? "" : typeof c === "number" ? String(c).replace(".", ",") : c;
+    let s = c == null ? "" : typeof c === "number" ? String(c).replace(".", ",") : c;
+    // Texto que começa com = + - @ vira fórmula no Excel; o apóstrofo o mantém como texto.
+    if (typeof c === "string" && /^[=+\-@\t\r]/.test(c)) s = `'${c}`;
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return `﻿${cells.map((r) => r.map(esc).join(";")).join("\r\n")}\r\n`;
 }
 
-const HEADER_ALIASES: Record<string, BulkField | "productId" | "variantId"> = Object.fromEntries(SHEET_COLUMNS.map((c) => [normalizeKey(c.header), c.field]));
+const HEADER_ALIASES: Record<string, SheetField> = Object.fromEntries(SHEET_COLUMNS.map((c) => [normalizeKey(c.header), c.field]));
 Object.assign(HEADER_ALIASES, {
   [normalizeKey("Produto")]: "name",
   [normalizeKey("Variação")]: "name",
@@ -130,22 +137,47 @@ function parseStatusLabel(s: string): BulkStatus | null {
   return null;
 }
 
+/** Tira o apóstrofo que o CSV exportado põe antes de = + - @. */
+const unformula = (s: string) => (/^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s);
+
+// Célula numérica do .xlsx: o ponto é sempre decimal ("21.989" = 21,989), nunca milhar.
+const xlsxNumber = (raw: string) => {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+const readMoney = (raw: string, num: boolean) => {
+  if (!num) return parseMoney(raw);
+  const n = xlsxNumber(raw);
+  return n == null ? null : Math.round(n * 100);
+};
+const readInt = (raw: string, num: boolean) => {
+  const n = num ? xlsxNumber(raw) : parseInteger(raw);
+  return n != null && Number.isInteger(n) ? n : null;
+};
+
+const leafKey = (label: string) => normalizeKey(label.split("›").pop() ?? "");
+
 export type SheetApply = { rows: BulkRow[]; changed: number; notes: string[] };
 
 /**
  * Aplica uma planilha (a exportada, editada no Excel) sobre as linhas da tela. Encontra cada
  * linha pelo ID (ou pelo SKU) e só muda as células preenchidas; célula vazia mantém o valor.
+ * `numeric` (de readXlsx) marca as células que o .xlsx guardou como número.
  */
-export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup): SheetApply {
+export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup, opts: { numeric?: boolean[][] } = {}): SheetApply {
   const notes: string[] = [];
   const headerIndex = sheet.findIndex((r) => r.some((c) => HEADER_ALIASES[normalizeKey(c)] === "productId") || r.filter((c) => HEADER_ALIASES[normalizeKey(c)]).length >= 3);
   if (headerIndex < 0) return { rows: current, changed: 0, notes: ["Não encontrei o cabeçalho. Use a planilha exportada por esta tela."] };
   const cols = sheet[headerIndex].map((c) => HEADER_ALIASES[normalizeKey(c)] ?? null);
   const byKey = new Map(current.map((r) => [r.key, r]));
   const bySku = new Map(current.filter((r) => r.sku).map((r) => [r.sku.toLowerCase(), r]));
-  const catByName = new Map(lookup.categories.flatMap((c) => [[normalizeKey(c.label), c.id], [normalizeKey(c.label.split("›").pop() ?? ""), c.id]] as [string, string][]));
+  const catByLabel = new Map(lookup.categories.map((c) => [normalizeKey(c.label), c.id]));
+  // Nome curto ("Fones") também vale; null quando mais de uma categoria tem esse nome.
+  const catByLeaf = new Map<string, string | null>();
+  for (const c of lookup.categories) catByLeaf.set(leafKey(c.label), catByLeaf.has(leafKey(c.label)) ? null : c.id);
   const brandByName = new Map(lookup.brands.map((b) => [normalizeKey(b.name), b.id]));
   const next = new Map<string, BulkRow>();
+  const exportedIdx = cols.indexOf("stockBase");
   let missing = 0;
 
   for (let i = headerIndex + 1; i < sheet.length; i++) {
@@ -158,7 +190,7 @@ export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup
     if (!cells.some((c) => c.trim())) continue;
     const pid = get("productId");
     const vid = get("variantId");
-    const sku = get("sku");
+    const sku = unformula(get("sku"));
     const base = (vid ? byKey.get(`v:${vid}`) : pid ? byKey.get(`p:${pid}`) : undefined) ?? (sku ? bySku.get(sku.toLowerCase()) : undefined);
     if (!base) {
       missing++;
@@ -167,36 +199,58 @@ export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup
     const row = { ...(next.get(base.key) ?? base) };
     const line = `Linha ${i + 1}`;
     for (const [idx, field] of cols.entries()) {
-      if (!field || field === "productId" || field === "variantId") continue;
+      if (!field || field === "productId" || field === "variantId" || field === "stockBase") continue;
       const raw = (cells[idx] ?? "").trim();
       if (!raw || !editable(row, field)) continue;
+      const num = !!opts.numeric?.[i]?.[idx];
       switch (field) {
         case "name":
-          row.name = raw.slice(0, row.variantId ? 80 : 160);
+          row.name = unformula(raw).slice(0, row.variantId ? 80 : 160);
           break;
-        case "sku":
-          row.sku = raw.slice(0, 64);
+        case "sku": {
+          const s = unformula(raw).slice(0, 64);
+          // O Excel tira zeros à esquerda e escreve números longos como 1,23E+12.
+          if (s !== row.sku && (/^\d+([.,]\d+)?e[+-]?\d+$/i.test(s) || (/^0+\d/.test(row.sku) && s === row.sku.replace(/^0+/, ""))))
+            notes.push(`${line}: SKU “${raw}” parece ter sido alterado pelo Excel; mantive “${row.sku}”. Formate a coluna como Texto ou use o .xlsx.`);
+          else row.sku = s;
           break;
-        case "ean":
-          row.ean = raw.replace(/\D/g, "").slice(0, 14);
+        }
+        case "ean": {
+          const ean = raw.replace(/\s/g, "");
+          if (ean === row.ean) break;
+          if (isValidGtin(ean)) row.ean = ean;
+          else notes.push(`${line}: EAN “${raw}” inválido, mantive o atual. Se o Excel mostrou o código como 7,89E+12 (notação científica), formate a coluna como Texto ou use o .xlsx.`);
           break;
+        }
         case "priceCents":
         case "compareAtCents":
         case "costCents": {
-          const c = parseMoney(raw);
+          const c = readMoney(raw, num);
           if (c == null) notes.push(`${line}: valor inválido em “${raw}”.`);
           else row[field] = c;
           break;
         }
         case "stock": {
-          const n = parseInteger(raw);
-          if (n == null) notes.push(`${line}: estoque inválido em “${raw}”.`);
-          else row.stock = n;
+          const n = readInt(raw, num);
+          if (n == null) {
+            notes.push(`${line}: estoque inválido em “${raw}”.`);
+            break;
+          }
+          const exportedRaw = exportedIdx >= 0 ? (cells[exportedIdx] ?? "").trim() : "";
+          const exported = exportedRaw ? readInt(exportedRaw, !!opts.numeric?.[i]?.[exportedIdx]) : null;
+          if (exported == null) row.stock = n; // planilha sem a coluna (antiga): valor absoluto
+          else if (n !== exported) {
+            row.stock = Math.max(0, base.stock + n - exported);
+            if (base.stock !== exported) notes.push(`${line}: o estoque mudou de ${exported} para ${base.stock} desde a exportação; apliquei só a mudança da planilha (${n > exported ? "+" : ""}${n - exported}) e ficou ${row.stock}.`);
+          }
           break;
         }
-        case "weightGrams":
-          row.weightGrams = parseWeight(raw) ?? row.weightGrams;
+        case "weightGrams": {
+          // "1.200" é mil e duzentos gramas, como no preço e no estoque.
+          const g = num ? xlsxNumber(raw) : parseWeight(/^\d{1,3}(\.\d{3})+(\s*g)?$/i.test(raw) ? raw.replace(/\./g, "") : raw);
+          if (g != null) row.weightGrams = Math.round(g);
           break;
+        }
         case "widthCm":
         case "heightCm":
         case "depthCm":
@@ -214,8 +268,11 @@ export function applySheet(current: BulkRow[], sheet: SheetRow[], lookup: Lookup
           break;
         }
         case "categoryId": {
-          const id = catByName.get(normalizeKey(raw));
+          const k = normalizeKey(raw);
+          const id = catByLabel.get(k) ?? catByLeaf.get(k);
           if (id) row.categoryId = id;
+          else if (id === null)
+            notes.push(`${line}: há mais de uma categoria “${raw}”; use o caminho completo (${lookup.categories.filter((c) => leafKey(c.label) === k).map((c) => c.label).join(" ou ")}).`);
           else notes.push(`${line}: categoria “${raw}” não existe. Crie em Catálogo → Categorias.`);
           break;
         }

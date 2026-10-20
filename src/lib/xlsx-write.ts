@@ -1,7 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 
 // Gera um .xlsx simples (uma aba), sem dependências além do fflate: textos como "inlineStr",
-// números como número, primeira linha em negrito e congelada.
+// números como número, primeira linha (ou as primeiras, com frozenRows) em negrito e congelada.
 
 export type XlsxCell = string | number | null;
 
@@ -21,15 +21,16 @@ function colName(i: number) {
   return s;
 }
 
-export function buildXlsx(rows: XlsxCell[][], opts: { sheetName?: string; widths?: number[] } = {}): Uint8Array {
+export function buildXlsx(rows: XlsxCell[][], opts: { sheetName?: string; widths?: number[]; frozenRows?: number } = {}): Uint8Array {
   const sheetName = esc((opts.sheetName ?? "Planilha").slice(0, 31));
+  const frozen = opts.frozenRows ?? 1;
   const body = rows
     .map((row, r) => {
       const cells = row
         .map((v, c) => {
           if (v == null || v === "") return "";
           const ref = `${colName(c)}${r + 1}`;
-          const style = r === 0 ? ' s="1"' : "";
+          const style = r < frozen ? ' s="1"' : "";
           if (typeof v === "number" && Number.isFinite(v)) return `<c r="${ref}"${style}><v>${v}</v></c>`;
           return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${esc(String(v))}</t></is></c>`;
         })
@@ -39,7 +40,7 @@ export function buildXlsx(rows: XlsxCell[][], opts: { sheetName?: string; widths
     .join("");
   const cols = opts.widths?.length ? `<cols>${opts.widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` : "";
   const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="${frozen}" topLeftCell="A${frozen + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`;
 
   return zipSync({
     "[Content_Types].xml": strToU8(
