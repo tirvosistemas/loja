@@ -17,13 +17,14 @@ export type PromoLite = {
   flash: boolean;
   badge: string | null;
   priority: number;
+  startsAt?: Date | null;
   endsAt: Date | null;
   categoryIds: string[];
   brandIds: string[];
   productIds: string[];
 };
 
-export type PromoInfo = { id: string; name: string; badge: string | null; flash: boolean; endsAt: string | null };
+export type PromoInfo = { id: string; name: string; badge: string | null; flash: boolean; startsAt: string | null; endsAt: string | null };
 
 export type PriceTarget = { id: string; categoryId: string | null; brandId: string | null };
 
@@ -45,6 +46,7 @@ async function loadActivePromotions(): Promise<PromoLite[]> {
     flash: p.flash,
     badge: p.badge,
     priority: p.priority,
+    startsAt: p.startsAt,
     endsAt: p.endsAt,
     categoryIds: jsonIds(p.categoryIds),
     brandIds: jsonIds(p.brandIds),
@@ -114,7 +116,7 @@ export function effectivePrice(
     compareAtCents: compareAt,
     discountPercent: compareAt ? Math.round((1 - final / compareAt) * 100) : 0,
     promotion: best
-      ? { id: best.id, name: best.name, badge: best.badge, flash: best.flash, endsAt: best.endsAt?.toISOString() ?? null }
+      ? { id: best.id, name: best.name, badge: best.badge, flash: best.flash, startsAt: best.startsAt?.toISOString() ?? null, endsAt: best.endsAt?.toISOString() ?? null }
       : null,
   };
 }

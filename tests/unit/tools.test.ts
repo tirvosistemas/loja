@@ -140,6 +140,6 @@ describe("páginas legais", () => {
     expect(p.content).toContain("10 dias corridos");
     expect(p.content).toContain("CNPJ 12.345.678/0001-90");
     expect(buildLegalPage("entregas", s).content).toContain("por km");
-    expect(legalMissing(settings)).toEqual(["razão social", "CNPJ", "endereço", "e-mail ou WhatsApp"]);
+    expect(legalMissing(settings)).toEqual(["razão social", "CNPJ", "endereço", "e-mail"]);
   });
 });

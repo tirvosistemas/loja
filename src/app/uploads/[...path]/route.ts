@@ -1,4 +1,4 @@
-import { readUpload } from "@/lib/uploads";
+import { jpegFromWebp, readUpload } from "@/lib/uploads";
 
 // Serve as imagens enviadas pelo painel (pasta UPLOAD_DIR). Em produção o Caddy pode
 // servir direto do disco; esta rota garante que funciona em qualquer ambiente.
@@ -11,7 +11,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
     return new Response("Not found", { status: 404 }); // "%" solto no endereço
   }
   if (rel.includes("..") || rel.includes("\0")) return new Response("Not found", { status: 404 });
-  const file = await readUpload(rel);
+  let file = await readUpload(rel);
+  // .jpg do catálogo da Meta: gerado do .webp no primeiro acesso.
+  if (!file && (await jpegFromWebp(rel))) file = await readUpload(rel);
   if (!file) return new Response("Not found", { status: 404 });
   return new Response(new Uint8Array(file.body), {
     headers: {

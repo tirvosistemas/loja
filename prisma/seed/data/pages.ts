@@ -103,16 +103,16 @@ Em compras feitas pela internet, você pode desistir em até **7 dias corridos**
 
 ## Produto com defeito
 
-Se o produto apresentar defeito, você tem **90 dias** para reclamar (art. 26 do CDC), além da garantia do fabricante indicada na página de cada produto.
+Você pode reclamar de defeitos em até **30 dias** (produtos não duráveis) ou **90 dias** (produtos duráveis) a partir do recebimento (art. 26 do CDC), além da garantia do fabricante indicada na página de cada produto. Se o defeito só se manifestar com o uso (vício oculto), o prazo conta a partir de quando ele aparecer (art. 26, §3º).
 
 1. Entre em contato pelo WhatsApp com fotos ou vídeo do problema.
-2. Para defeitos nos primeiros 7 dias, fazemos a troca direto com a loja.
-3. Depois disso, orientamos o acionamento da assistência técnica autorizada do fabricante, que tem até 30 dias para resolver.
-4. Se o problema não for resolvido nesse prazo, você pode escolher a troca, a devolução do valor ou o abatimento no preço.
+2. Você pode entregar o produto à loja, que o encaminha à assistência técnica, ou levá-lo direto à assistência autorizada do fabricante.
+3. O conserto deve ser feito em até 30 dias.
+4. Se o problema não for resolvido nesse prazo, você pode escolher a troca, a devolução do valor ou o abatimento no preço (art. 18, §1º, do CDC).
 
 ## Avaria no transporte
 
-Confira o produto no recebimento. Se a embalagem estiver danificada, recuse a entrega e nos avise. Se perceber o dano depois, fale com a gente em até 7 dias com fotos.
+Confira o produto no recebimento. Se a embalagem estiver danificada, recuse a entrega e nos avise. Se perceber o dano depois, fale com a gente, com fotos, em até 30 dias (produtos não duráveis) ou 90 dias (duráveis) a partir do recebimento.
 
 ## Como pedir
 
@@ -148,17 +148,27 @@ Compartilhamos dados apenas com quem precisa deles para concluir a compra: proce
 
 ## Cookies e armazenamento
 
-Usamos cookies e o armazenamento do navegador para manter o carrinho, a lista de favoritos e as suas preferências, como o tema claro ou escuro. Se a loja usar ferramentas de análise, elas são informadas aqui e podem ser bloqueadas no seu navegador.
+Usamos cookies e o armazenamento do navegador para manter o carrinho, a lista de favoritos e as suas preferências, como o tema claro ou escuro. Ferramentas de medição de visitas e anúncios, se a loja usar, só funcionam depois que você clica em **Aceitar** no aviso de cookies. Para mudar a escolha, apague os dados deste site nas configurações do navegador.
 
 ## Seus direitos
 
-Você pode pedir a qualquer momento: confirmação do tratamento, acesso, correção, anonimização, portabilidade ou exclusão dos seus dados, além de revogar consentimentos (art. 18 da LGPD). Alguns dados precisam ser guardados pelo prazo exigido em lei, como os de notas fiscais.
+A qualquer momento, você pode pedir (art. 18 da LGPD):
+
+- confirmação de que tratamos seus dados e acesso a eles;
+- correção de dados incompletos, errados ou desatualizados;
+- anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desacordo com a lei;
+- portabilidade dos dados para outro fornecedor;
+- eliminação dos dados tratados com o seu consentimento e revogação do consentimento;
+- informação sobre com quem compartilhamos seus dados;
+- informação sobre a possibilidade de não dar o consentimento e o que acontece se você não der.
+
+Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD). Alguns dados precisam ser guardados pelo prazo exigido em lei, como os de notas fiscais.
 
 ## Segurança e retenção
 
 O site usa conexão criptografada (HTTPS), o acesso ao painel é restrito e protegido por senha e os dados são guardados apenas pelo tempo necessário para as finalidades acima.
 
-## Contato
+## Canal de atendimento ao titular (LGPD)
 
 Para exercer seus direitos ou tirar dúvidas sobre privacidade, fale com a gente pelo WhatsApp ou pelo e-mail informado no rodapé do site.`,
   },
