@@ -52,7 +52,7 @@ export type KnownProduct = {
   ean?: string | null;
 };
 
-export async function aiFillProduct(opts: { config: AiConfig; images: Buffer[]; known: KnownProduct; categories: string[]; folder?: string; rewrite?: boolean }) {
+export async function aiFillProduct(opts: { config: AiConfig; images: Buffer[]; known: KnownProduct; categories: string[]; folder?: string; rewrite?: boolean; reference?: string | null }) {
   const k = opts.known;
   const known = Object.entries({
     nome: k.name,
@@ -73,6 +73,7 @@ export async function aiFillProduct(opts: { config: AiConfig; images: Buffer[]; 
   const prompt = [
     opts.folder ? `Pasta: ${opts.folder}` : null,
     `Já preenchido pelo dono:\n${known || "(nada)"}`,
+    opts.reference ? `Dados de uma base de códigos de barras dos EUA, em inglês, só para consulta (confira com as fotos e escreva em português):\n${opts.reference}` : null,
     `Categorias da loja:\n${opts.categories.join("\n") || "(nenhuma)"}`,
     opts.images.length ? null : "(Sem fotos: use só o texto acima.)",
   ]
