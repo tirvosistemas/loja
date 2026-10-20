@@ -141,7 +141,7 @@ type ProductRecord = {
   metaDescription: string | null;
   categoryId: string | null;
   brandId: string | null;
-  images: { url: string; alt: string | null; width: number | null; height: number | null }[];
+  images: { url: string; sourceUrl?: string | null; alt: string | null; width: number | null; height: number | null }[];
   variants: { id: string; name: string; sku: string | null; priceCents: number | null; compareAtCents: number | null; stock: number; active: boolean }[];
 };
 
@@ -172,7 +172,7 @@ export function productToValues(p: ProductRecord): ProductFormValues {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean),
-    images: p.images.map((im) => ({ url: im.url, alt: im.alt ?? "", width: im.width, height: im.height })),
+    images: p.images.map((im) => ({ url: im.url, sourceUrl: im.sourceUrl ?? null, alt: im.alt ?? "", width: im.width, height: im.height })),
     videoUrl: p.videoUrl ?? "",
     priceCents: p.priceCents,
     compareAtCents: p.compareAtCents,
@@ -223,7 +223,7 @@ export function valuesToInput(v: ProductFormValues): ProductInput {
     isNew: v.isNew,
     freeShipping: v.freeShipping,
     tags: v.tags,
-    images: v.images.map((im) => ({ url: im.url, alt: im.alt ?? "", width: im.width ?? null, height: im.height ?? null })),
+    images: v.images.map((im) => ({ url: im.url, sourceUrl: im.sourceUrl ?? null, alt: im.alt ?? "", width: im.width ?? null, height: im.height ?? null })),
     videoUrl: v.videoUrl,
     priceCents: v.priceCents ?? 0,
     compareAtCents: v.compareAtCents,

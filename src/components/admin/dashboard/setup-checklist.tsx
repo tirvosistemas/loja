@@ -20,7 +20,10 @@ export function SetupChecklist({ items, total }: { items: ChecklistItem[]; total
             Configure sua loja
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {items.length === 1 ? "Falta 1 passo" : `Faltam ${items.length} passos`} para a loja ficar redondinha.
+            {items.length === 1 ? "Falta 1 passo" : `Faltam ${items.length} passos`} para a loja ficar redondinha.{" "}
+            <Link href="/admin/loja-pronta" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Ver checklist completo
+            </Link>
           </p>
         </div>
         <div className="flex items-center gap-3 sm:w-56">

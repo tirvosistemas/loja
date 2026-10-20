@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
-  BadgePercent, BellRing, ExternalLink, FileText, FolderTree, GalleryHorizontal, LayoutDashboard, LogOut, Mail, Menu,
+  BadgePercent, BellRing, ExternalLink, FileText, FolderTree, GalleryHorizontal, LayoutDashboard, ListChecks, LogOut, Mail, Menu,
   Package, Settings, ShieldCheck, ShoppingBag, Star, Tags, Ticket, Users, X, type LucideIcon,
 } from "lucide-react";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
@@ -15,7 +15,7 @@ import { ADMIN_NAV } from "./nav";
 import { logoutAction } from "@/app/admin/actions";
 
 const ICONS: Record<string, LucideIcon> = {
-  LayoutDashboard, ShoppingBag, Users, Package, FolderTree, Tags, Star, GalleryHorizontal, BadgePercent, Ticket, BellRing, Mail, FileText, Settings, ShieldCheck,
+  LayoutDashboard, ListChecks, ShoppingBag, Users, Package, FolderTree, Tags, Star, GalleryHorizontal, BadgePercent, Ticket, BellRing, Mail, FileText, Settings, ShieldCheck,
 };
 
 type Counts = { orders: number; reviews: number };

@@ -33,6 +33,7 @@ import { groupByProductFolder } from "@/lib/importer/folders";
 import { parseCsv, parseXlsx, sheetToItems, SHEET_TEMPLATE } from "@/lib/importer/sheet";
 import type { ImportPreview } from "@/lib/importer/server";
 import {
+  type ImportOptions,
   checkUploaded,
   importDrive,
   importFromUrls,
@@ -78,10 +79,13 @@ async function pool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>
   );
 }
 
-export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; aiReady: boolean }) {
+/** aiReady: nome do provedor de IA configurado, ou null. */
+export function ProductImporter({ driveReady, aiReady, photoStandard }: { driveReady: boolean; aiReady: string | null; photoStandard: boolean }) {
   const [source, setSource] = useState<Source>("pasta");
   const [publish, setPublish] = useState(false);
   const [useAi, setUseAi] = useState(false);
+  const [barcode, setBarcode] = useState(true);
+  const [standardize, setStandardize] = useState(photoStandard);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState<null | "reading" | "importing">(null);
   const [progress, setProgress] = useState<{ label: string; done: number; total: number } | null>(null);
@@ -211,7 +215,7 @@ export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; 
 
   // ─────────────── Importação
 
-  async function importOne(row: Row, opts: { publish: boolean; useAi: boolean }) {
+  async function importOne(row: Row, opts: ImportOptions) {
     const p = payloads.current.get(row.key);
     if (!p) return;
     patch(row.key, { state: "running", message: undefined });
@@ -265,7 +269,7 @@ export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; 
     if (!queue.length) return;
     stopRef.current = false;
     setBusy("importing");
-    const opts = { publish, useAi: useAi && aiReady };
+    const opts: ImportOptions = { publish, useAi: useAi && !!aiReady, barcode, standardize: standardize && photoStandard };
     let done = 0;
     setProgress({ label: "Importando", done, total: queue.length });
     await pool(
@@ -343,8 +347,8 @@ export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; 
             ) : (
               <Callout tone="warning" title="Falta a chave do Google Drive">
                 Cadastre em{" "}
-                <Link href="/admin/configuracoes?aba=integracoes" className="font-medium text-foreground underline-offset-4 hover:underline">
-                  Configurações → Integrações
+                <Link href="/admin/configuracoes?aba=catalogo" className="font-medium text-foreground underline-offset-4 hover:underline">
+                  Configurações → Ferramentas do catálogo
                 </Link>
                 . Enquanto isso, baixe a pasta do Drive (vem em .zip) e use a opção “Arquivo .zip”.
               </Callout>
@@ -415,8 +419,28 @@ export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; 
           <p className="text-sm font-medium">3. Opções</p>
           <Checkbox checked={publish} onChange={setPublish} disabled={disabled} label="Publicar direto na loja (sem passar por rascunho)" />
           <div>
+            <Checkbox checked={barcode} onChange={setBarcode} disabled={disabled} label="Completar pelo código de barras (EAN)" />
+            <p className="ml-7 mt-1 text-[13px] text-subtle">Quando o produto tem EAN, busca nome, marca, medidas e, se não houver fotos, as fotos da base.</p>
+          </div>
+          <div>
+            <Checkbox checked={standardize && photoStandard} onChange={setStandardize} disabled={disabled || !photoStandard} label="Padronizar as fotos (fundo, formato quadrado e marca d'água)" />
+            <p className="ml-7 mt-1 text-[13px] text-subtle">
+              {photoStandard ? (
+                "Usa o padrão das Configurações. A foto original fica guardada."
+              ) : (
+                <>
+                  Ligue o padrão em{" "}
+                  <Link href="/admin/configuracoes?aba=catalogo" className="font-medium text-foreground underline-offset-4 hover:underline">
+                    Configurações → Ferramentas do catálogo
+                  </Link>
+                  .
+                </>
+              )}
+            </p>
+          </div>
+          <div>
             <Checkbox
-              checked={useAi && aiReady}
+              checked={useAi && !!aiReady}
               onChange={setUseAi}
               disabled={disabled || !aiReady}
               label={
@@ -427,14 +451,14 @@ export function ProductImporter({ driveReady, aiReady }: { driveReady: boolean; 
             />
             <p className="ml-7 mt-1 text-[13px] text-subtle">
               {aiReady ? (
-                <>Lê as fotos de apoio (info, caixa, manual) ou, sem elas, as primeiras fotos. Custa centavos por produto, cobrados pela Anthropic. O que você escreveu no dados.txt é mantido.</>
+                <>Usa o {aiReady}. Lê as fotos de apoio (info, caixa, manual) ou, sem elas, as primeiras fotos. O que você escreveu no dados.txt é mantido.</>
               ) : (
                 <>
-                  Cadastre a chave da Anthropic em{" "}
-                  <Link href="/admin/configuracoes?aba=integracoes" className="font-medium text-foreground underline-offset-4 hover:underline">
-                    Configurações → Integrações
+                  Escolha uma IA e cadastre a chave em{" "}
+                  <Link href="/admin/configuracoes?aba=ia" className="font-medium text-foreground underline-offset-4 hover:underline">
+                    Configurações → Inteligência artificial
                   </Link>{" "}
-                  para ligar.
+                  (o Gemini tem plano grátis).
                 </>
               )}
             </p>

@@ -1,7 +1,12 @@
 "use client";
 
-import { Lightbulb, Video } from "lucide-react";
+import { useTransition } from "react";
+import { Lightbulb, Undo2, Video, Wand2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { pluralize } from "@/lib/format";
+import { standardizeImagesAction } from "@/app/admin/(panel)/produtos/tools-actions";
 import { ImageGallery } from "@/components/admin/image-uploader";
 import { MAX_PRODUCT_IMAGES } from "@/lib/admin/product-schema";
 import { FormField, FormSection, type FormApi } from "./form-kit";
@@ -13,7 +18,64 @@ const TIPS = [
   "Mostre detalhes: painel, prateleiras, gavetas, etiqueta de energia.",
 ];
 
-export function MediaSection({ form, active }: { form: FormApi; active: boolean }) {
+/** Padroniza as fotos do formulário pelo padrão das Configurações (ou volta às originais). */
+function StandardizeBar({ form, enabled }: { form: FormApi; enabled: boolean }) {
+  const [pending, start] = useTransition();
+  const v = form.values;
+  const standardized = v.images.filter((im) => im.sourceUrl).length;
+  if (!v.images.length) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/40 px-4 py-3">
+      <p className="min-w-0 text-[13px] text-muted-foreground">
+        {standardized
+          ? `${pluralize(standardized, "foto padronizada", "fotos padronizadas")} (a original fica guardada).`
+          : enabled
+            ? "Deixe todas iguais: fundo, formato quadrado e marca d'água das Configurações."
+            : "Ligue o padrão das fotos em Configurações → Ferramentas do catálogo."}
+      </p>
+      <div className="flex gap-2">
+        {standardized > 0 && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => form.set("images", v.images.map((im) => (im.sourceUrl ? { ...im, url: im.sourceUrl, sourceUrl: null, width: null, height: null } : im)))}
+          >
+            <Undo2 aria-hidden /> Voltar às originais
+          </Button>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          loading={pending}
+          disabled={!enabled}
+          onClick={() =>
+            start(async () => {
+              try {
+                const r = await standardizeImagesAction(v.images.map((im) => ({ url: im.url, sourceUrl: im.sourceUrl ?? null })));
+                if (!r.ok || !r.data) {
+                  toast.error(r.ok ? "Não foi possível padronizar." : r.error);
+                  return;
+                }
+                const next = r.data.images;
+                form.set("images", form.values.images.map((im, i) => (next[i] ? { ...im, ...next[i] } : im)));
+                toast.success(`${pluralize(r.data.changed, "foto padronizada", "fotos padronizadas")}. Salve o produto para gravar.`);
+              } catch {
+                toast.error("Falha de conexão. Tente de novo.");
+              }
+            })
+          }
+        >
+          <Wand2 aria-hidden /> {standardized ? "Padronizar de novo" : "Padronizar fotos"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function MediaSection({ form, active, photoStandard }: { form: FormApi; active: boolean; photoStandard: boolean }) {
   const { values: v, set, errors: e } = form;
   const imageError = e.images ?? Object.entries(e).find(([k]) => k.startsWith("images."))?.[1];
   return (
@@ -39,6 +101,8 @@ export function MediaSection({ form, active }: { form: FormApi; active: boolean 
           }}
         />
       </FormField>
+
+      <StandardizeBar form={form} enabled={photoStandard} />
 
       <div className="rounded-xl border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-sm font-medium">

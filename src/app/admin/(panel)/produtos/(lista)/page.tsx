@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Package, Plus, SearchX, Upload } from "lucide-react";
+import { Package, Plus, SearchX, Sheet, Upload } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { pluralize } from "@/lib/format";
@@ -35,6 +35,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <Link href="/admin/produtos/importar" className={buttonVariants({ variant: "secondary" })}>
               <Upload aria-hidden /> Importar
             </Link>
+            {!emptyCatalog && (
+              <Link href="/admin/produtos/editar-em-massa" className={buttonVariants({ variant: "secondary" })}>
+                <Sheet aria-hidden /> Edição em massa
+              </Link>
+            )}
             <Link href="/admin/produtos/novo" className={buttonVariants()}>
               <Plus aria-hidden /> Novo produto
             </Link>

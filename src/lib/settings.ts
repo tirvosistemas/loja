@@ -94,10 +94,52 @@ export const integrationsSchema = z.object({
   stripeWebhookSecret: str(""), // criptografado
   mapsProvider: z.enum(["osm", "google", "openrouteservice", "mapbox"]).default("osm"),
   mapsApiKey: str(""), // criptografado
-  googleDriveApiKey: str(""), // criptografado · importador de produtos
-  anthropicApiKey: str(""), // criptografado · IA do importador (Claude)
   googleAnalyticsId: str(""),
   metaPixelId: str(""),
+});
+
+export const AI_PROVIDER_IDS = ["gemini", "openai", "anthropic", "deepseek", "xai", "mistral", "openrouter", "custom"] as const;
+export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
+
+// Inteligência artificial do painel (importador, cadastro de produto). Uma chave por provedor,
+// para trocar de provedor sem perder as outras. Modelo vazio = escolhido automaticamente.
+export const aiSchema = z.object({
+  provider: z.enum(AI_PROVIDER_IDS).default("gemini"),
+  geminiKey: str(""), // criptografado
+  openaiKey: str(""), // criptografado
+  anthropicKey: str(""), // criptografado
+  deepseekKey: str(""), // criptografado
+  xaiKey: str(""), // criptografado
+  mistralKey: str(""), // criptografado
+  openrouterKey: str(""), // criptografado
+  customKey: str(""), // criptografado
+  customBaseUrl: str(""), // ex.: https://api.exemplo.com/v1 (compatível com a API da OpenAI)
+  models: z.record(z.string(), z.string().trim().max(120)).default({}),
+});
+
+// Ferramentas do catálogo: chaves do importador, calculadora de preço, padrão das fotos e feed.
+export const catalogSchema = z.object({
+  googleDriveApiKey: str(""), // criptografado · importador de produtos
+  cosmosToken: str(""), // criptografado · busca por código de barras (Cosmos/Bluesoft)
+  // Calculadora de preço: porcentagens sobre o preço de venda, valores fixos em centavos.
+  feeCardPercent: z.number().min(0).max(30).default(4.99), // maquininha / cartão online
+  feePixPercent: z.number().min(0).max(30).default(0),
+  taxPercent: z.number().min(0).max(40).default(6), // Simples Nacional, faixa inicial do comércio
+  packagingCents: cents(200),
+  otherCostCents: cents(0), // por unidade (etiqueta, brinde, …)
+  targetMarginPercent: z.number().min(0).max(80).default(30),
+  priceEnding: z.enum(["90", "99", "00", "none"]).default("90"),
+  // Padrão das fotos dos produtos.
+  photoSquare: z.boolean().default(true),
+  photoBackground: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
+  photoPaddingPercent: z.number().min(0).max(30).default(6),
+  watermarkEnabled: z.boolean().default(false),
+  watermarkImage: str("/brand/tirvo-logo-para-fundo-claro.svg"),
+  watermarkPosition: z.enum(["bottom-right", "bottom-left", "top-right", "top-left", "center"]).default("bottom-right"),
+  watermarkOpacity: z.number().min(5).max(100).default(35),
+  watermarkSizePercent: z.number().min(5).max(60).default(22),
+  // Catálogo para Google Shopping e Meta (Instagram/Facebook).
+  feedEnabled: z.boolean().default(true),
 });
 
 export const pushSchema = z.object({
@@ -132,6 +174,8 @@ export const settingsSchemas = {
   shipping: shippingSchema,
   payment: paymentSchema,
   integrations: integrationsSchema,
+  ai: aiSchema,
+  catalog: catalogSchema,
   push: pushSchema,
   seo: seoSchema,
   appearance: appearanceSchema,
@@ -145,10 +189,14 @@ export type ShippingSettings = Settings["shipping"];
 export type PaymentSettings = Settings["payment"];
 export type IntegrationsSettings = Settings["integrations"];
 export type PushSettings = Settings["push"];
+export type AiSettings = Settings["ai"];
+export type CatalogSettings = Settings["catalog"];
 
 /** Campos guardados criptografados. */
 export const SECRET_FIELDS: { [K in SettingsGroup]?: string[] } = {
-  integrations: ["stripeSecretKey", "stripeWebhookSecret", "mapsApiKey", "googleDriveApiKey", "anthropicApiKey"],
+  integrations: ["stripeSecretKey", "stripeWebhookSecret", "mapsApiKey"],
+  ai: ["geminiKey", "openaiKey", "anthropicKey", "deepseekKey", "xaiKey", "mistralKey", "openrouterKey", "customKey"],
+  catalog: ["googleDriveApiKey", "cosmosToken"],
   push: ["vapidPrivateKey"],
 };
 
@@ -231,8 +279,6 @@ export async function getSecretPreviews() {
     stripeSecretKey: maskSecret(s.integrations.stripeSecretKey),
     stripeWebhookSecret: maskSecret(s.integrations.stripeWebhookSecret),
     mapsApiKey: maskSecret(s.integrations.mapsApiKey),
-    googleDriveApiKey: maskSecret(s.integrations.googleDriveApiKey),
-    anthropicApiKey: maskSecret(s.integrations.anthropicApiKey),
     vapidPrivateKey: maskSecret(s.push.vapidPrivateKey),
   };
 }

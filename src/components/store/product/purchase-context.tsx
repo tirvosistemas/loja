@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductDetailDTO, VariantDTO } from "@/lib/catalog";
 import { installmentText } from "@/lib/format";
@@ -52,6 +52,11 @@ export function PurchaseProvider({ product, pay, children }: { product: ProductD
   // Com uma única variação, ela já vem escolhida.
   const [variantId, setVariantId] = useState<string | null>(product.variants.length === 1 ? product.variants[0].id : null);
   const [quantity, setQty] = useState(1);
+  // Link de anúncio (Google/Instagram) já com a variação: ?variacao=<id>.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("variacao");
+    if (id && product.variants.some((v) => v.id === id)) setVariantId(id);
+  }, [product.variants]);
   const [variantError, setVariantError] = useState(false);
 
   const variant = product.variants.find((v) => v.id === variantId) ?? null;

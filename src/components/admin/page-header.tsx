@@ -30,7 +30,7 @@ export function StatusBadge({ tone, children }: { tone: Tone; children: ReactNod
 /** Tabela responsiva com o visual do painel. Use <th>/<td> normais dentro. */
 export function AdminTable({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto rounded-2xl border border-border bg-card", className)}>
+    <div className={cn("relative overflow-x-auto rounded-2xl border border-border bg-card", className)}>
       <table className="w-full min-w-[640px] text-sm [&_td]:px-4 [&_td]:py-3 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-subtle [&_thead]:border-b [&_thead]:border-border [&_tbody_tr]:border-b [&_tbody_tr]:border-border [&_tbody_tr:last-child]:border-0 [&_tbody_tr:hover]:bg-elevated/50">
         {children}
       </table>

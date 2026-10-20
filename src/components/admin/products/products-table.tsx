@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Copy, ExternalLink, EyeOff, Pencil, Rocket, Star, StarOff, Trash2, X } from "lucide-react";
+import { Archive, Copy, ExternalLink, EyeOff, Pencil, Rocket, Star, StarOff, Trash2, Undo2, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { formatBRL, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AdminProductRow } from "@/lib/admin/products";
 import { bulkProducts, deleteProduct, duplicateProduct, setProductStatus, toggleFeatured, type BulkProductAction } from "@/app/admin/(panel)/produtos/actions";
+import { standardizeProductsAction } from "@/app/admin/(panel)/produtos/tools-actions";
 import { ProductThumb } from "./product-thumb";
 
 const STATUS_LABEL = { ACTIVE: "Ativo", DRAFT: "Rascunho", ARCHIVED: "Arquivado" } as const;
@@ -180,6 +181,12 @@ function BulkBar({ ids, onDone }: { ids: string[]; onDone: () => void }) {
               {b.icon} {b.label}
             </Button>
           ))}
+          <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => standardizeProductsAction(ids, false), { onOk: onDone })} title="Fundo, formato e marca d'água das Configurações">
+            <Wand2 /> Padronizar fotos
+          </Button>
+          <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(() => standardizeProductsAction(ids, true), { onOk: onDone })} title="Volta às fotos originais">
+            <Undo2 /> Fotos originais
+          </Button>
           <ConfirmButton
             size="sm"
             variant="danger-ghost"

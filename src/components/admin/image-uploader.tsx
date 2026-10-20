@@ -7,7 +7,7 @@ import { imageUrl } from "@/lib/images";
 import { cn } from "@/lib/utils";
 
 export type UploadFolder = "products" | "banners" | "categories" | "brands" | "pages" | "push" | "misc";
-export type GalleryImage = { url: string; alt?: string | null; width?: number | null; height?: number | null };
+export type GalleryImage = { url: string; alt?: string | null; width?: number | null; height?: number | null; sourceUrl?: string | null };
 type Uploaded = { key: string; width: number | null; height: number | null };
 
 const dimension = (n: unknown) => (typeof n === "number" && Number.isInteger(n) && n > 0 ? n : null);

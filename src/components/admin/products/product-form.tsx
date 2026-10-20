@@ -14,6 +14,7 @@ import { useUnsavedGuard } from "@/components/admin/catalog/use-action";
 import { formatDate, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BrandOption, CategoryOption } from "@/lib/admin/catalog";
+import type { ProductTools } from "@/lib/admin/product-tools";
 import { createProduct, deleteProduct, duplicateProduct, updateProduct } from "@/app/admin/(panel)/produtos/actions";
 import type { FormApi } from "./form-kit";
 import { valuesToInput, type ProductFormValues } from "./form-values";
@@ -23,6 +24,7 @@ import { PricingSection } from "./pricing-section";
 import { VariantsSection } from "./variants-section";
 import { SpecsSection } from "./specs-section";
 import { SeoSection } from "./seo-section";
+import { AiFillButton } from "./ai-fill";
 
 const SECTIONS = [
   { id: "informacoes", label: "Informações", icon: FileText, fields: ["name", "shortDescription", "description", "categoryId", "brandId", "status", "featured", "isNew", "freeShipping", "tags"] },
@@ -64,6 +66,7 @@ export function ProductForm({
   brands: initialBrands,
   storeName,
   siteHost,
+  tools,
 }: {
   productId: string | null; // null = novo produto
   initial: ProductFormValues;
@@ -72,6 +75,7 @@ export function ProductForm({
   brands: BrandOption[];
   storeName: string;
   siteHost: string;
+  tools: ProductTools;
 }) {
   const router = useRouter();
   const isNew = !productId;
@@ -98,6 +102,12 @@ export function ProductForm({
       return next;
     });
   }, []);
+
+  const addBrand = useCallback(
+    (b: { id: string; name: string }) =>
+      setBrands((list) => (list.some((x) => x.id === b.id) ? list : [...list, { id: b.id, name: b.name, active: true }].sort((a, c) => a.name.localeCompare(c.name, "pt-BR")))),
+    [],
+  );
 
   const form: FormApi = {
     values,
@@ -402,18 +412,22 @@ export function ProductForm({
           </div>
 
           <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-border-strong bg-elevated/40 px-4 py-3">
+              <p className="min-w-0 text-sm text-muted-foreground">
+                {tools.aiName ? `Atalho: a IA (${tools.aiName}) lê as fotos e preenche o que falta.` : "Atalho: com uma IA configurada, as fotos viram descrição, ficha técnica e SEO."}
+              </p>
+              <AiFillButton form={form} aiName={tools.aiName} categories={categories} brands={brands} onBrandCreated={addBrand} />
+            </div>
             <InfoSection
               form={form}
               active={tab === "informacoes"}
               categories={categories}
               brands={brands}
               autoFocusName={isNew}
-              onBrandCreated={(b) =>
-                setBrands((list) => (list.some((x) => x.id === b.id) ? list : [...list, { id: b.id, name: b.name, active: true }].sort((a, c) => a.name.localeCompare(c.name, "pt-BR"))))
-              }
+              onBrandCreated={addBrand}
             />
-            <MediaSection form={form} active={tab === "fotos"} />
-            <PricingSection form={form} active={tab === "preco"} />
+            <MediaSection form={form} active={tab === "fotos"} photoStandard={tools.photoStandard} />
+            <PricingSection form={form} active={tab === "preco"} price={tools.price} onBrandCreated={addBrand} />
             <VariantsSection form={form} active={tab === "variacoes"} />
             <SpecsSection form={form} active={tab === "ficha"} />
             <SeoSection form={form} active={tab === "seo"} storeName={storeName} siteHost={siteHost} isNew={isNew} />

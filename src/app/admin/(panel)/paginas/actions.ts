@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { fail, fromZod, isUniqueError, type ActionResult } from "@/lib/action";
 import { slugify } from "@/lib/utils";
 import { uniqueSlug } from "@/lib/admin/catalog";
+import { getSettings } from "@/lib/settings";
+import { buildLegalPage } from "@/lib/legal-pages";
 
 // Páginas institucionais (Sobre, Trocas, Privacidade…), escritas em Markdown simples.
 
@@ -102,5 +104,50 @@ export async function deletePage(id: string): Promise<ActionResult> {
     return { ok: true, message: "Página excluída." };
   } catch (e) {
     return handleError(e, "excluir");
+  }
+}
+
+// ───────── Páginas legais geradas com os dados da loja
+
+const legalInput = z.object({
+  ids: z.array(z.enum(["trocas-e-devolucoes", "politica-de-privacidade", "termos-de-uso", "entregas"])).min(1, "Escolha pelo menos uma página."),
+  overwrite: z.boolean(),
+  returnDays: z.number().int().min(7, "O mínimo por lei é 7 dias.").max(90),
+  defectDays: z.number().int().min(90, "O mínimo por lei para produtos duráveis é 90 dias.").max(365),
+});
+
+export async function generateLegalPages(input: z.input<typeof legalInput>): Promise<ActionResult<{ created: number; updated: number; skipped: number }>> {
+  await requireAdmin();
+  const parsed = legalInput.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+  const v = parsed.data;
+  try {
+    const settings = await getSettings();
+    const max = await db.page.aggregate({ _max: { sortOrder: true } });
+    let order = (max._max.sortOrder ?? 0) + 1;
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const id of v.ids) {
+      const p = buildLegalPage(id, settings, { returnDays: v.returnDays, defectDays: v.defectDays });
+      const existing = await db.page.findUnique({ where: { slug: p.slug }, select: { id: true } });
+      if (existing) {
+        if (!v.overwrite) {
+          skipped++;
+          continue;
+        }
+        await db.page.update({ where: { id: existing.id }, data: { title: p.title, content: p.content } });
+        updated++;
+      } else {
+        await db.page.create({ data: { slug: p.slug, title: p.title, content: p.content, published: true, showInFooter: true, sortOrder: order++ } });
+        created++;
+      }
+    }
+    refresh();
+    revalidatePath("/", "layout");
+    const parts = [created && `${created} criada${created > 1 ? "s" : ""}`, updated && `${updated} atualizada${updated > 1 ? "s" : ""}`, skipped && `${skipped} mantida${skipped > 1 ? "s" : ""} como estava${skipped > 1 ? "m" : ""}`].filter(Boolean);
+    return { ok: true, data: { created, updated, skipped }, message: `Páginas: ${parts.join(", ")}.` };
+  } catch (e) {
+    return handleError(e, "gerar as páginas legais");
   }
 }

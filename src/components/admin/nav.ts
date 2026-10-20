@@ -2,7 +2,10 @@
 export const ADMIN_NAV = [
   {
     group: "Visão geral",
-    items: [{ href: "/admin", label: "Painel", icon: "LayoutDashboard" }],
+    items: [
+      { href: "/admin", label: "Painel", icon: "LayoutDashboard" },
+      { href: "/admin/loja-pronta", label: "Loja pronta", icon: "ListChecks" },
+    ],
   },
   {
     group: "Vendas",

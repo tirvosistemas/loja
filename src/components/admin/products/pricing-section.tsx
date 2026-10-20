@@ -1,15 +1,96 @@
 "use client";
 
-import { BadgePercent, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { BadgePercent, Calculator, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Switch } from "@/components/ui/switch";
 import { NumberInput } from "@/components/admin/settings/form-kit";
 import { formatBRL, pluralize } from "@/lib/format";
 import { cn, onlyDigits } from "@/lib/utils";
+import { priceBreakdown, suggestPrice, type PriceCalcConfig } from "@/lib/price-calc";
 import { FormField, FormSection, type FormApi } from "./form-kit";
+import { BarcodeTools } from "./barcode-tools";
 
-export function PricingSection({ form, active }: { form: FormApi; active: boolean }) {
+/** Sugere o preço pelo custo e mostra quanto sobra de verdade (taxa, imposto e embalagem). */
+function PriceCalculator({ form, cfg }: { form: FormApi; cfg: PriceCalcConfig }) {
+  const { values: v, set } = form;
+  const [margin, setMargin] = useState<number | null>(cfg.targetMarginPercent);
+  const cost = v.costCents ?? 0;
+  const suggested = cost > 0 && margin != null ? suggestPrice(cost, cfg, margin) : null;
+  const price = v.priceCents ?? 0;
+  const card = price > 0 ? priceBreakdown(price, cost, cfg, "card") : null;
+  const pix = price > 0 ? priceBreakdown(price, cost, cfg, "pix") : null;
+  return (
+    <div className="space-y-4 rounded-xl border border-border bg-background/40 p-4" aria-live="polite">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Calculator className="size-4 text-primary" aria-hidden /> Calculadora de preço
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="w-36 text-sm">
+          <span className="mb-1.5 block text-[13px] text-muted-foreground">Margem desejada</span>
+          <NumberInput value={margin} onChange={setMargin} allowEmpty min={0} max={80} step={0.5} suffix="%" />
+        </label>
+        <div className="min-w-0 flex-1 text-sm">
+          {!cost ? (
+            <p className="text-muted-foreground">Informe o custo para ver o preço sugerido.</p>
+          ) : suggested ? (
+            <p>
+              Preço sugerido <span className="tabular text-lg font-semibold text-primary">{formatBRL(suggested)}</span>
+            </p>
+          ) : (
+            <p className="text-warning">Taxas, imposto e margem somam demais: reduza a margem.</p>
+          )}
+        </div>
+        {suggested && suggested !== price && (
+          <Button type="button" size="sm" variant="secondary" onClick={() => set("priceCents", suggested)}>
+            Usar {formatBRL(suggested)}
+          </Button>
+        )}
+      </div>
+      {card && pix && cost > 0 && (
+        <div className="grid gap-2 text-[13px] sm:grid-cols-2">
+          {[
+            { label: "No cartão", b: card },
+            { label: "No Pix", b: pix },
+          ].map(({ label, b }) => (
+            <div key={label} className="rounded-lg border border-border px-3 py-2">
+              <p className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">{label}, sobra</span>
+                <span className={cn("tabular font-semibold", b.profitCents > 0 ? "text-success" : "text-danger")}>
+                  {formatBRL(b.profitCents)} ({b.marginPercent.toLocaleString("pt-BR")}%)
+                </span>
+              </p>
+              <p className="tabular mt-0.5 text-subtle">
+                taxa {formatBRL(b.feeCents)} · imposto {formatBRL(b.taxCents)} · custo + embalagem {formatBRL(b.fixedCents)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-subtle">
+        Taxas e embalagem vêm de{" "}
+        <a href="/admin/configuracoes?aba=catalogo" className="underline-offset-4 hover:underline">
+          Configurações → Ferramentas do catálogo
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
+export function PricingSection({
+  form,
+  active,
+  price: priceCfg,
+  onBrandCreated,
+}: {
+  form: FormApi;
+  active: boolean;
+  price: PriceCalcConfig;
+  onBrandCreated: (b: { id: string; name: string }) => void;
+}) {
   const { values: v, set, errors: e } = form;
   const price = v.priceCents ?? 0;
   const cost = v.costCents;
@@ -33,6 +114,8 @@ export function PricingSection({ form, active }: { form: FormApi; active: boolea
         </FormField>
       </div>
 
+      <PriceCalculator form={form} cfg={priceCfg} />
+
       {(profit != null || discount != null) && (
         <div className="grid gap-3 sm:grid-cols-2" aria-live="polite">
           {profit != null && margin != null && (
@@ -40,10 +123,10 @@ export function PricingSection({ form, active }: { form: FormApi; active: boolea
               <TrendingUp className={cn("size-5 shrink-0", profit > 0 ? "text-success" : "text-danger")} aria-hidden />
               <div className="min-w-0 text-sm">
                 <p>
-                  Margem <span className={cn("tabular font-semibold", profit > 0 ? "text-success" : "text-danger")}>{margin.toLocaleString("pt-BR")}%</span>
+                  Margem bruta <span className={cn("tabular font-semibold", profit > 0 ? "text-success" : "text-danger")}>{margin.toLocaleString("pt-BR")}%</span>
                 </p>
                 <p className="tabular text-[13px] text-muted-foreground">
-                  {profit >= 0 ? "Lucro" : "Prejuízo"} de {formatBRL(Math.abs(profit))} por unidade
+                  {profit >= 0 ? "Lucro" : "Prejuízo"} de {formatBRL(Math.abs(profit))} por unidade, antes de taxas e imposto
                 </p>
               </div>
             </div>
@@ -78,17 +161,20 @@ export function PricingSection({ form, active }: { form: FormApi; active: boolea
             onChange={(ev) => set("sku", ev.target.value)}
           />
         </FormField>
-        <FormField name="ean" label="EAN (código de barras)" htmlFor="p-ean" error={e.ean} hint="8 a 14 números, como na caixa do produto.">
-          <Input
-            id="p-ean"
-            value={v.ean}
-            inputMode="numeric"
-            maxLength={14}
-            className="tabular font-mono"
-            placeholder="7891234567890"
-            aria-invalid={!!e.ean}
-            onChange={(ev) => set("ean", onlyDigits(ev.target.value).slice(0, 14))}
-          />
+        <FormField name="ean" label="EAN (código de barras)" htmlFor="p-ean" error={e.ean} hint="Digite (ou bipe) e clique em Buscar: nome, marca, foto e medidas vêm sozinhos.">
+          <div className="flex gap-2">
+            <Input
+              id="p-ean"
+              value={v.ean}
+              inputMode="numeric"
+              maxLength={14}
+              className="tabular min-w-0 flex-1 font-mono"
+              placeholder="7891234567890"
+              aria-invalid={!!e.ean}
+              onChange={(ev) => set("ean", onlyDigits(ev.target.value).slice(0, 14))}
+            />
+            <BarcodeTools form={form} onBrandCreated={onBrandCreated} />
+          </div>
         </FormField>
       </div>
 

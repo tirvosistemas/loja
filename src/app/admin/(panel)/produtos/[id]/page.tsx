@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { getBrandOptions, getCategoryOptions } from "@/lib/admin/catalog";
+import { getProductTools } from "@/lib/admin/product-tools";
 import { ProductForm } from "@/components/admin/products/product-form";
 import { productToValues } from "@/components/admin/products/form-values";
 import { siteHost } from "@/components/admin/products/site-host";
@@ -22,17 +23,18 @@ export default async function EditProductPage({ params }: Params) {
   await requireAdmin();
   const { id } = await params;
   if (!validId(id)) notFound();
-  const [product, categories, brands, settings] = await Promise.all([
+  const [product, categories, brands, settings, tools] = await Promise.all([
     db.product.findUnique({
       where: { id },
       include: {
-        images: { orderBy: { sortOrder: "asc" }, select: { url: true, alt: true, width: true, height: true } },
+        images: { orderBy: { sortOrder: "asc" }, select: { url: true, sourceUrl: true, alt: true, width: true, height: true } },
         variants: { orderBy: { sortOrder: "asc" } },
       },
     }),
     getCategoryOptions(),
     getBrandOptions(),
     getSettings(),
+    getProductTools(),
   ]);
   if (!product) notFound();
 
@@ -55,6 +57,7 @@ export default async function EditProductPage({ params }: Params) {
       brands={brands}
       storeName={settings.store.name}
       siteHost={siteHost()}
+      tools={tools}
     />
   );
 }

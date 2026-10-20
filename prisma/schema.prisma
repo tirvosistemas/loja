@@ -143,6 +143,7 @@ model ProductImage {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String // chave de upload (ex.: /uploads/products/2026/10/abc) ou URL completa
+  sourceUrl String? // foto original, quando `url` é a versão padronizada (fundo, quadrado, marca d'água)
   alt       String?
   width     Int?
   height    Int?

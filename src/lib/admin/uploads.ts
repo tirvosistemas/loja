@@ -11,7 +11,7 @@ export async function deleteUnusedUploads(keys: Iterable<string | null | undefin
   if (!list.length) return;
   try {
     const [images, items, categories, brands, banners, campaigns] = await Promise.all([
-      db.productImage.findMany({ where: { url: { in: list } }, select: { url: true } }),
+      db.productImage.findMany({ where: { OR: [{ url: { in: list } }, { sourceUrl: { in: list } }] }, select: { url: true, sourceUrl: true } }),
       db.orderItem.findMany({ where: { image: { in: list } }, select: { image: true }, distinct: ["image"] }),
       db.category.findMany({ where: { image: { in: list } }, select: { image: true } }),
       db.brand.findMany({ where: { logo: { in: list } }, select: { logo: true } }),
@@ -19,7 +19,7 @@ export async function deleteUnusedUploads(keys: Iterable<string | null | undefin
       db.pushCampaign.findMany({ where: { image: { in: list } }, select: { image: true } }),
     ]);
     const used = new Set<string>([
-      ...images.map((i) => i.url),
+      ...images.flatMap((i) => [i.url, i.sourceUrl ?? ""]),
       ...items.map((i) => i.image ?? ""),
       ...categories.map((c) => c.image ?? ""),
       ...brands.map((b) => b.logo ?? ""),

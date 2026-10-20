@@ -53,6 +53,13 @@ const imageSchema = z.object({
     .max(500)
     .refine((u) => isUploadKey(u) || /^https:\/\/[^\s"'<>]+$/i.test(u) || /^\/[\w\-./]+$/.test(u), "Imagem inválida."),
   alt: optText(191),
+  // Foto original quando `url` é a versão padronizada (fundo, quadrado, marca d'água).
+  sourceUrl: z
+    .string()
+    .max(500)
+    .refine((u) => isUploadKey(u), "Imagem inválida.")
+    .nullish()
+    .transform((v) => v ?? null),
   // Dimensões devolvidas pelo upload (fotos novas); as já gravadas vêm do banco.
   width: z.number().int().min(1).max(20_000).nullish().transform((v) => v ?? null),
   height: z.number().int().min(1).max(20_000).nullish().transform((v) => v ?? null),

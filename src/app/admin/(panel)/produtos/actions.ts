@@ -128,7 +128,7 @@ export async function createProduct(input: ProductInput): Promise<ActionResult<{
         ...productFields(v),
         specs: v.specs.length ? (v.specs as Prisma.InputJsonValue) : Prisma.DbNull,
         slug,
-        images: { create: v.images.map((im, i) => ({ url: im.url, alt: im.alt, width: im.width ?? null, height: im.height ?? null, sortOrder: i })) },
+        images: { create: v.images.map((im, i) => ({ url: im.url, sourceUrl: im.sourceUrl, alt: im.alt, width: im.width ?? null, height: im.height ?? null, sortOrder: i })) },
         variants: {
           create: v.variants.map((x, i) => ({
             name: x.name,
@@ -162,7 +162,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ac
       async (tx) => {
         const existing = await tx.product.findUnique({
           where: { id },
-          select: { images: { select: { url: true, width: true, height: true } }, variants: { select: { id: true, sku: true } } },
+          select: { images: { select: { url: true, sourceUrl: true, width: true, height: true } }, variants: { select: { id: true, sku: true } } },
         });
         if (!existing) throw new RuleError("Produto não encontrado. Ele pode ter sido excluído.");
 
@@ -176,6 +176,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ac
             data: v.images.map((im, i) => ({
               productId: id,
               url: im.url,
+              sourceUrl: im.sourceUrl ?? dims.get(im.url)?.sourceUrl ?? null,
               alt: im.alt,
               width: dims.get(im.url)?.width ?? im.width ?? null,
               height: dims.get(im.url)?.height ?? im.height ?? null,
@@ -199,7 +200,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ac
         }
 
         const nextUrls = new Set(v.images.map((im) => im.url));
-        return existing.images.map((im) => im.url).filter((u) => !nextUrls.has(u));
+        return existing.images.filter((im) => !nextUrls.has(im.url)).flatMap((im) => [im.url, im.sourceUrl]);
       },
       { timeout: 20_000 },
     );
@@ -215,11 +216,11 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   await requireAdmin();
   if (!idSchema.safeParse(id).success) return fail("Produto inválido.");
   try {
-    const product = await db.product.findUnique({ where: { id }, select: { images: { select: { url: true } } } });
+    const product = await db.product.findUnique({ where: { id }, select: { images: { select: { url: true, sourceUrl: true } } } });
     if (!product) return fail("Produto não encontrado. Ele pode já ter sido excluído.");
     // Avaliações, fotos e variações saem junto; os pedidos guardam nome, SKU e preço.
     await db.product.delete({ where: { id } });
-    await deleteUnusedUploads(product.images.map((im) => im.url));
+    await deleteUnusedUploads(product.images.flatMap((im) => [im.url, im.sourceUrl]));
     refresh();
     return { ok: true, message: "Produto excluído." };
   } catch (e) {
@@ -273,7 +274,7 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
         categoryId: p.categoryId,
         brandId: p.brandId,
         // As fotos apontam para os mesmos arquivos (não duplica no disco).
-        images: { create: p.images.map((im, i) => ({ url: im.url, alt: im.alt, width: im.width, height: im.height, sortOrder: i })) },
+        images: { create: p.images.map((im, i) => ({ url: im.url, sourceUrl: im.sourceUrl, alt: im.alt, width: im.width, height: im.height, sortOrder: i })) },
         variants: {
           create: p.variants.map((x, i) => ({
             name: x.name,
@@ -357,9 +358,9 @@ export async function bulkProducts(ids: string[], action: BulkProductAction): Pr
         count = (await db.product.updateMany({ where, data: { featured: false } })).count;
         break;
       case "delete": {
-        const images = await db.productImage.findMany({ where: { productId: where.id }, select: { url: true } });
+        const images = await db.productImage.findMany({ where: { productId: where.id }, select: { url: true, sourceUrl: true } });
         count = (await db.product.deleteMany({ where })).count;
-        await deleteUnusedUploads(images.map((im) => im.url));
+        await deleteUnusedUploads(images.flatMap((im) => [im.url, im.sourceUrl]));
         break;
       }
     }

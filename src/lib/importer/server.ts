@@ -40,7 +40,7 @@ export class ImportError extends Error {
   }
 }
 
-type Catalog = {
+export type Catalog = {
   categories: { id: string; name: string; label: string; keys: string[] }[];
   brands: { id: string; name: string; key: string }[];
 };
@@ -60,13 +60,13 @@ export function categoryLabels(catalog: Catalog) {
   return catalog.categories.map((c) => c.label);
 }
 
-function findCategory(name: string | null, catalog: Catalog) {
+export function findCategory(name: string | null, catalog: Catalog) {
   if (!name) return null;
   const k = normalizeKey(name);
   return catalog.categories.find((c) => c.keys.includes(k)) ?? catalog.categories.find((c) => c.keys.some((x) => loose(x) === loose(k))) ?? null;
 }
 
-function findBrand(name: string | null, catalog: Catalog) {
+export function findBrand(name: string | null, catalog: Catalog) {
   if (!name) return null;
   const k = normalizeKey(name);
   return catalog.brands.find((b) => b.key === k) ?? null;
@@ -122,7 +122,8 @@ export async function assertImportable(build: BuildResult) {
   if (dup) throw new ImportError(`Já existe na loja: ${dup.name}.`, dup);
 }
 
-async function brandId(name: string | null, catalog: Catalog): Promise<string | null> {
+/** Marca pelo nome; cria se ainda não existe. */
+export async function ensureBrand(name: string | null, catalog: Catalog): Promise<string | null> {
   if (!name) return null;
   const found = findBrand(name, catalog);
   if (found) return found.id;
@@ -141,7 +142,7 @@ async function brandId(name: string | null, catalog: Catalog): Promise<string | 
 
 export async function saveImported(
   draft: ImportDraft,
-  images: { url: string; width: number | null; height: number | null }[],
+  images: { url: string; sourceUrl?: string | null; width: number | null; height: number | null }[],
   opts: { publish: boolean },
   catalog: Catalog,
 ): Promise<{ id: string; name: string; status: "ACTIVE" | "DRAFT" }> {
@@ -153,13 +154,13 @@ export async function saveImported(
     shortDescription: draft.shortDescription,
     description: draft.description,
     categoryId: findCategory(draft.category, catalog)?.id ?? null,
-    brandId: await brandId(draft.brand, catalog),
+    brandId: await ensureBrand(draft.brand, catalog),
     status,
     featured: draft.featured,
     isNew: draft.isNew,
     freeShipping: draft.freeShipping,
     tags: draft.tags,
-    images: images.slice(0, MAX_IMPORT_PHOTOS).map((im, i) => ({ url: im.url, alt: i === 0 ? draft.name.slice(0, 191) : `${draft.name.slice(0, 170)} – foto ${i + 1}`, width: im.width, height: im.height })),
+    images: images.slice(0, MAX_IMPORT_PHOTOS).map((im, i) => ({ url: im.url, sourceUrl: im.sourceUrl ?? null, alt: i === 0 ? draft.name.slice(0, 191) : `${draft.name.slice(0, 170)} – foto ${i + 1}`, width: im.width, height: im.height })),
     videoUrl: draft.videoUrl,
     priceCents: draft.priceCents ?? 0,
     compareAtCents: draft.compareAtCents,

@@ -383,10 +383,6 @@ const integrationsInput = z.object({
   mapsProvider: z.enum(["osm", "google", "openrouteservice", "mapbox"]),
   mapsApiKey: text(400).refine((v) => !/\s/.test(v), "A chave não pode ter espaços."),
   clearMapsApiKey: z.boolean(),
-  googleDriveApiKey: text(200).refine((v) => !/\s/.test(v), "A chave não pode ter espaços."),
-  clearGoogleDriveApiKey: z.boolean(),
-  anthropicApiKey: text(300).refine((v) => v === "" || /^sk-ant-[\w-]+$/.test(v), "A chave da Anthropic começa com sk-ant-."),
-  clearAnthropicApiKey: z.boolean(),
   googleAnalyticsId: text(30)
     .transform((v) => v.toUpperCase())
     .refine((v) => v === "" || /^G-[A-Z0-9]{4,20}$/.test(v), "O ID do Google Analytics 4 começa com G-, ex.: G-ABC123XYZ."),
@@ -394,7 +390,7 @@ const integrationsInput = z.object({
 });
 
 export type IntegrationsInput = z.input<typeof integrationsInput>;
-export type SecretPreviews = { stripeSecretKey: string; stripeWebhookSecret: string; mapsApiKey: string; googleDriveApiKey: string; anthropicApiKey: string };
+export type SecretPreviews = { stripeSecretKey: string; stripeWebhookSecret: string; mapsApiKey: string };
 
 export async function saveIntegrationsSettings(input: IntegrationsInput): Promise<ActionResult<{ previews: SecretPreviews; publishableKey: string }>> {
   await requireAdmin(ROLES);
@@ -421,8 +417,6 @@ export async function saveIntegrationsSettings(input: IntegrationsInput): Promis
       stripeWebhookSecret: v.clearStripeWebhookSecret ? CLEAR_SECRET : v.stripeWebhookSecret,
       mapsProvider: v.mapsProvider,
       mapsApiKey: v.clearMapsApiKey ? CLEAR_SECRET : v.mapsApiKey,
-      googleDriveApiKey: v.clearGoogleDriveApiKey ? CLEAR_SECRET : v.googleDriveApiKey,
-      anthropicApiKey: v.clearAnthropicApiKey ? CLEAR_SECRET : v.anthropicApiKey,
       googleAnalyticsId: v.googleAnalyticsId,
       metaPixelId: v.metaPixelId,
     });
@@ -434,8 +428,6 @@ export async function saveIntegrationsSettings(input: IntegrationsInput): Promis
           stripeSecretKey: maskSecret(saved.stripeSecretKey),
           stripeWebhookSecret: maskSecret(saved.stripeWebhookSecret),
           mapsApiKey: maskSecret(saved.mapsApiKey),
-          googleDriveApiKey: maskSecret(saved.googleDriveApiKey),
-          anthropicApiKey: maskSecret(saved.anthropicApiKey),
         },
       },
       message: done("Integrações salvas."),

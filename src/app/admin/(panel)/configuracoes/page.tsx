@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BellRing, Bike, CreditCard, KeyRound, MapPin, Search, Store, type LucideIcon } from "lucide-react";
+import { BellRing, Bike, Boxes, CreditCard, KeyRound, MapPin, Search, Sparkles, Store, type LucideIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { RMC_CITIES, getSecretPreviews, getSettings } from "@/lib/settings";
@@ -14,6 +14,11 @@ import { PaymentForm } from "@/components/admin/settings/payment-form";
 import { IntegrationsForm } from "@/components/admin/settings/integrations-form";
 import { AppForm } from "@/components/admin/settings/app-form";
 import { SeoForm } from "@/components/admin/settings/seo-form";
+import { AiForm } from "@/components/admin/settings/ai-form";
+import { CatalogForm } from "@/components/admin/settings/catalog-form";
+import { AI_PROVIDERS } from "@/lib/ai/providers";
+import { BRAND_WATERMARKS } from "@/lib/photos";
+import { maskSecret } from "@/lib/crypto";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -22,7 +27,9 @@ const TABS: { id: string; label: string; icon: LucideIcon; description: string }
   { id: "endereco", label: "Endereço e retirada", icon: MapPin, description: "De onde saem as entregas e onde o cliente retira." },
   { id: "frete", label: "Frete e entrega", icon: Bike, description: "Preço por km, frete grátis, raio e cidades atendidas." },
   { id: "pagamentos", label: "Pagamentos", icon: CreditCard, description: "Stripe, Pix e pagamento na entrega." },
-  { id: "integracoes", label: "Integrações", icon: KeyRound, description: "Chaves da Stripe, mapas, importador de produtos e análise de visitas." },
+  { id: "integracoes", label: "Integrações", icon: KeyRound, description: "Chaves da Stripe, mapas e análise de visitas." },
+  { id: "ia", label: "Inteligência artificial", icon: Sparkles, description: "A IA que preenche cadastros: Gemini, ChatGPT, Claude, DeepSeek, Grok e outras." },
+  { id: "catalogo", label: "Ferramentas do catálogo", icon: Boxes, description: "Calculadora de preço, padrão das fotos, importador, código de barras e catálogo para Google e Instagram." },
   { id: "app", label: "App e notificações", icon: BellRing, description: "Notificações push e instalação do app." },
   { id: "seo", label: "SEO e aparência", icon: Search, description: "Google, compartilhamento e visual da loja." },
 ];
@@ -70,15 +77,33 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             mapsProvider: i.mapsProvider,
             mapsApiKey: "",
             clearMapsApiKey: false,
-            googleDriveApiKey: "",
-            clearGoogleDriveApiKey: false,
-            anthropicApiKey: "",
-            clearAnthropicApiKey: false,
             googleAnalyticsId: i.googleAnalyticsId,
             metaPixelId: i.metaPixelId,
           }}
-          previews={{ stripeSecretKey: previews.stripeSecretKey, stripeWebhookSecret: previews.stripeWebhookSecret, mapsApiKey: previews.mapsApiKey, googleDriveApiKey: previews.googleDriveApiKey, anthropicApiKey: previews.anthropicApiKey }}
+          previews={{ stripeSecretKey: previews.stripeSecretKey, stripeWebhookSecret: previews.stripeWebhookSecret, mapsApiKey: previews.mapsApiKey }}
           webhookUrl={absoluteUrl("/api/stripe/webhook")}
+        />
+      );
+      break;
+    }
+    case "ia": {
+      const ai = s.ai;
+      content = (
+        <AiForm
+          initial={{ provider: ai.provider, keys: {}, clear: {}, models: ai.models, customBaseUrl: ai.customBaseUrl }}
+          previews={Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, maskSecret(ai[p.keyField])])) as Record<(typeof AI_PROVIDERS)[number]["id"], string>}
+        />
+      );
+      break;
+    }
+    case "catalogo": {
+      const { googleDriveApiKey, cosmosToken, ...c } = s.catalog;
+      content = (
+        <CatalogForm
+          initial={{ ...c, googleDriveApiKey: "", clearGoogleDriveApiKey: false, cosmosToken: "", clearCosmosToken: false }}
+          previews={{ googleDriveApiKey: maskSecret(googleDriveApiKey), cosmosToken: maskSecret(cosmosToken) }}
+          brandLogos={BRAND_WATERMARKS}
+          feedUrls={{ google: absoluteUrl("/feeds/google.xml"), csv: absoluteUrl("/feeds/catalogo.csv") }}
         />
       );
       break;

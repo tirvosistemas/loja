@@ -32,7 +32,7 @@ async function request(url: URL, key: string, init?: { signal?: AbortSignal }) {
   const body = (await res.json().catch(() => null)) as { error?: { message?: string; errors?: { reason?: string }[]; status?: string } } | null;
   const reason = body?.error?.errors?.[0]?.reason ?? body?.error?.status ?? "";
   const message = body?.error?.message ?? "";
-  if (/keyInvalid|API_KEY_INVALID/i.test(reason + message)) throw new DriveError("A chave do Google Drive é inválida. Confira em Configurações → Integrações.");
+  if (/keyInvalid|API_KEY_INVALID/i.test(reason + message)) throw new DriveError("A chave do Google Drive é inválida. Confira em Configurações → Ferramentas do catálogo.");
   if (/accessNotConfigured|SERVICE_DISABLED|has not been used/i.test(reason + message))
     throw new DriveError("A Google Drive API não está ativada no projeto da chave. Ative em console.cloud.google.com → APIs e serviços.");
   if (/referer|ip address|API_KEY_.*BLOCKED|blocked/i.test(reason + message))

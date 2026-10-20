@@ -11,8 +11,12 @@ import { isDadosName, isImageName, isInfoPhoto, MAX_IMPORT_PHOTOS, naturalCompar
 import { buildDraft } from "@/lib/importer/build";
 import { DriveError, downloadFile, getFolder, isFolder, listFolder, MAX_DRIVE_PHOTO_BYTES, parseFolderId, readDados, type DriveFile } from "@/lib/importer/drive";
 import { fetchImage } from "@/lib/importer/fetch-image";
-import { aiErrorMessage, fillWithAi, mergeAi, MAX_AI_IMAGES } from "@/lib/importer/ai";
+import { mergeAi } from "@/lib/importer/ai";
+import { aiErrorMessage, getAiConfig, MAX_AI_IMAGES } from "@/lib/ai/client";
+import { aiFillProduct } from "@/lib/ai/product";
 import { assertImportable, categoryLabels, findDuplicate, ImportError, loadCatalog, previewDraft, saveImported, type ImportPreview } from "@/lib/importer/server";
+import { BarcodeError, lookupBarcode } from "@/lib/barcode";
+import { photoStandard, standardizeImage } from "@/lib/admin/standardize";
 
 // Importador de produtos (Produtos → Importar). O navegador manda um produto por vez,
 // o que mostra o progresso e evita pedidos longos demais.
@@ -24,7 +28,8 @@ export type ImportResult =
 type Saved = { url: string; width: number | null; height: number | null };
 
 const text = (max: number) => z.string().max(max);
-const optionsSchema = z.object({ publish: z.boolean(), useAi: z.boolean() });
+const optionsSchema = z.object({ publish: z.boolean(), useAi: z.boolean(), barcode: z.boolean().default(false), standardize: z.boolean().default(false) });
+export type ImportOptions = z.input<typeof optionsSchema>;
 
 /** Roda `fn` em `items` com no máximo `limit` ao mesmo tempo, mantendo a ordem. */
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
@@ -49,16 +54,18 @@ function failImport(e: unknown, where: string): ImportResult {
 }
 
 /** Preenche com IA, se pedido e configurado. Erro na IA não impede o cadastro. */
-async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useAi: boolean, images: () => Promise<Buffer[]>, apiKey: string, catalog: Awaited<ReturnType<typeof loadCatalog>>) {
+async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useAi: boolean, images: () => Promise<Buffer[]>, catalog: Awaited<ReturnType<typeof loadCatalog>>) {
   const warnings: string[] = [];
   let draft = build.draft;
   if (!useAi) return { draft, warnings };
-  if (!apiKey) return { draft, warnings: ["IA não usada: cadastre a chave da Anthropic em Configurações → Integrações."] };
+  const config = await getAiConfig();
+  if (!config) return { draft, warnings: ["IA não usada: cadastre uma chave em Configurações → Inteligência artificial."] };
   try {
     const pics = await images();
     if (!pics.length) return { draft, warnings: ["IA não usada: o produto não tem fotos."] };
-    const ai = await fillWithAi({ apiKey, images: pics, draft, folder, categories: categoryLabels(catalog) });
-    draft = mergeAi(draft, ai, build.nameFromFolder);
+    const ai = await aiFillProduct({ config, images: pics, known: draft, folder, categories: categoryLabels(catalog) });
+    if (ai.imagesIgnored) warnings.push("O modelo de IA escolhido não lê fotos: só o texto foi usado.");
+    draft = mergeAi(draft, ai.data, build.nameFromFolder);
     // O nome pode ter mudado: confere de novo se já existe.
     if (draft.name !== build.draft.name) {
       const dup = await findDuplicate(draft);
@@ -69,6 +76,49 @@ async function withAi(build: ReturnType<typeof buildDraft>, folder: string, useA
     warnings.push(aiErrorMessage(e));
   }
   return { draft, warnings };
+}
+
+/**
+ * Completa pelo código de barras (Cosmos ou base gratuita) o que o dados.txt não trouxe.
+ * Sem fotos próprias, baixa as da base. Erro na busca vira aviso.
+ */
+async function withBarcode(build: ReturnType<typeof buildDraft>, enabled: boolean, hasPhotos: boolean) {
+  const warnings: string[] = [];
+  const d = build.draft;
+  if (!enabled || !d.ean) return { build, warnings, photoUrls: [] as string[] };
+  try {
+    const r = await lookupBarcode(d.ean, (await getSettings()).catalog.cosmosToken);
+    if (!r) return { build, warnings: [`Código ${d.ean} não encontrado nas bases.`], photoUrls: [] };
+    const draft = {
+      ...d,
+      name: build.nameFromFolder && r.name ? r.name.slice(0, 160) : d.name,
+      brand: d.brand ?? r.brand,
+      model: d.model ?? r.model,
+      color: d.color ?? r.color,
+      description: d.description ?? r.description,
+      weightGrams: d.weightGrams ?? r.weightGrams,
+      widthCm: d.widthCm ?? r.widthCm,
+      heightCm: d.heightCm ?? r.heightCm,
+      depthCm: d.depthCm ?? r.depthCm,
+    };
+    return { build: { ...build, draft, nameFromFolder: build.nameFromFolder && !r.name }, warnings, photoUrls: hasPhotos ? [] : r.images.slice(0, 3) };
+  } catch (e) {
+    return { build, warnings: [e instanceof BarcodeError ? e.message : "Busca pelo código de barras falhou."], photoUrls: [] };
+  }
+}
+
+/** Padroniza as fotos já gravadas (fundo, quadrado, marca d'água). Falha vira aviso. */
+async function withStandard(images: Saved[], enabled: boolean, warnings: string[]): Promise<(Saved & { sourceUrl?: string | null })[]> {
+  if (!enabled || !images.length) return images;
+  const std = await photoStandard();
+  return mapLimit(images, 2, async (im) => {
+    try {
+      return (await standardizeImage(im, std)) ?? im;
+    } catch {
+      warnings.push("Uma foto não pôde ser padronizada e entrou como estava.");
+      return im;
+    }
+  });
 }
 
 // ─────────────── Prévia (pasta do computador, .zip e planilha)
@@ -121,8 +171,8 @@ export async function listDriveFolder(link: string): Promise<ActionResult<{ root
   await requireAdmin();
   const id = parseFolderId(String(link ?? "").slice(0, 500));
   if (!id) return fail("Cole o link da pasta do Google Drive (drive.google.com/drive/folders/…).");
-  const key = (await getSettings()).integrations.googleDriveApiKey;
-  if (!key) return fail("Cadastre a chave do Google Drive em Configurações → Integrações.");
+  const key = (await getSettings()).catalog.googleDriveApiKey;
+  if (!key) return fail("Cadastre a chave do Google Drive em Configurações → Ferramentas do catálogo.");
   try {
     const root = await getFolder(id, key);
     const files = await listFolder(id, key);
@@ -163,8 +213,8 @@ export async function previewDrive(folders: { id: string; name: string }[]): Pro
   await requireAdmin();
   const parsed = driveFolders.safeParse(folders);
   if (!parsed.success) return fail("Lote inválido.");
-  const key = (await getSettings()).integrations.googleDriveApiKey;
-  if (!key) return fail("Cadastre a chave do Google Drive em Configurações → Integrações.");
+  const key = (await getSettings()).catalog.googleDriveApiKey;
+  if (!key) return fail("Cadastre a chave do Google Drive em Configurações → Ferramentas do catálogo.");
   try {
     const catalog = await loadCatalog();
     const out = await mapLimit(parsed.data, 4, async (f) => {
@@ -201,24 +251,30 @@ async function saveBuffers(sources: { label: string; load: () => Promise<Buffer>
   return results.filter((r): r is { saved: Saved; buf: Buffer } => !!r);
 }
 
-export async function importDrive(folder: { id: string; name: string }, options: { publish: boolean; useAi: boolean }): Promise<ImportResult> {
+/** Fotos do código de barras (produto sem fotos próprias). */
+async function barcodePhotos(urls: string[], warnings: string[]) {
+  return saveBuffers(
+    urls.map((u, i) => ({ label: `da base ${i + 1}`, load: () => fetchImage(u, { maxBytes: 10 * 1024 * 1024 }) })),
+    warnings,
+  );
+}
+
+export async function importDrive(folder: { id: string; name: string }, options: ImportOptions): Promise<ImportResult> {
   await requireAdmin();
   const f = driveFolders.safeParse([folder]);
   const o = optionsSchema.safeParse(options);
   if (!f.success || !o.success) return { ok: false, error: "Dados inválidos." };
-  const { integrations } = await getSettings();
-  if (!integrations.googleDriveApiKey) return { ok: false, error: "Cadastre a chave do Google Drive em Configurações → Integrações." };
-  const key = integrations.googleDriveApiKey;
-  let saved: Saved[] = [];
+  const key = (await getSettings()).catalog.googleDriveApiKey;
+  if (!key) return { ok: false, error: "Cadastre a chave do Google Drive em Configurações → Ferramentas do catálogo." };
+  let saved: (Saved & { sourceUrl?: string | null })[] = [];
   try {
     const p = await readDriveProduct(folder.id, key, o.data.useAi);
-    const build = buildDraft(folder.name, p.dadosText);
-    await assertImportable(build);
+    const first = buildDraft(folder.name, p.dadosText);
+    await assertImportable(first);
     const warnings: string[] = [];
-    const photos = await saveBuffers(
-      p.photos.map((ph) => ({ label: ph.name, load: () => downloadFile(ph, key) })),
-      warnings,
-    );
+    const bc = await withBarcode(first, o.data.barcode, p.photos.length > 0);
+    const build = bc.build;
+    const photos = [...(await saveBuffers(p.photos.map((ph) => ({ label: ph.name, load: () => downloadFile(ph, key) })), warnings)), ...(await barcodePhotos(bc.photoUrls, warnings))];
     saved = photos.map((x) => x.saved);
     const catalog = await loadCatalog();
     const ai = await withAi(
@@ -226,13 +282,14 @@ export async function importDrive(folder: { id: string; name: string }, options:
       folder.name,
       o.data.useAi,
       async () => (p.info.length ? mapLimit(p.info.slice(0, MAX_AI_IMAGES), 3, (x) => downloadFile(x, key)) : photos.slice(0, 4).map((x) => x.buf)),
-      integrations.anthropicApiKey,
       catalog,
     );
-    const r = await saveImported(ai.draft, saved, o.data, catalog);
-    return { ok: true, ...r, warnings: [...build.warnings, ...warnings, ...ai.warnings] };
+    saved = [...saved, ...(await withStandard(saved, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
+    const final = saved.filter((x) => !saved.some((y) => y.sourceUrl === x.url));
+    const r = await saveImported(ai.draft, final, o.data, catalog);
+    return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
-    await deleteUnusedUploads(saved.map((s) => s.url));
+    await deleteUnusedUploads(saved.flatMap((s) => [s.url, s.sourceUrl]));
     return failImport(e, "importar do Drive");
   }
 }
@@ -241,28 +298,35 @@ export async function importDrive(folder: { id: string; name: string }, options:
 
 const urlItem = z.object({ folder: text(300), dadosText: text(100_000), photoUrls: z.array(z.string().url().max(2000)).max(100) });
 
-export async function importFromUrls(item: z.input<typeof urlItem>, options: { publish: boolean; useAi: boolean }): Promise<ImportResult> {
+export async function importFromUrls(item: z.input<typeof urlItem>, options: ImportOptions): Promise<ImportResult> {
   await requireAdmin();
   const it = urlItem.safeParse(item);
   const o = optionsSchema.safeParse(options);
   if (!it.success || !o.success) return { ok: false, error: "Dados inválidos." };
-  const { integrations } = await getSettings();
-  let saved: Saved[] = [];
+  const { catalog: cfg } = await getSettings();
+  let saved: (Saved & { sourceUrl?: string | null })[] = [];
   try {
-    const build = buildDraft(it.data.folder, it.data.dadosText);
-    await assertImportable(build);
+    const first = buildDraft(it.data.folder, it.data.dadosText);
+    await assertImportable(first);
     const warnings: string[] = [];
-    const photos = await saveBuffers(
-      it.data.photoUrls.slice(0, MAX_IMPORT_PHOTOS).map((u, i) => ({ label: `${i + 1}`, load: () => fetchImage(u, { driveKey: integrations.googleDriveApiKey }) })),
-      warnings,
-    );
+    const bc = await withBarcode(first, o.data.barcode, it.data.photoUrls.length > 0);
+    const build = bc.build;
+    const photos = [
+      ...(await saveBuffers(
+        it.data.photoUrls.slice(0, MAX_IMPORT_PHOTOS).map((u, i) => ({ label: `${i + 1}`, load: () => fetchImage(u, { driveKey: cfg.googleDriveApiKey }) })),
+        warnings,
+      )),
+      ...(await barcodePhotos(bc.photoUrls, warnings)),
+    ];
     saved = photos.map((x) => x.saved);
     const catalog = await loadCatalog();
-    const ai = await withAi(build, it.data.folder, o.data.useAi, async () => photos.slice(0, 4).map((x) => x.buf), integrations.anthropicApiKey, catalog);
-    const r = await saveImported(ai.draft, saved, o.data, catalog);
-    return { ok: true, ...r, warnings: [...build.warnings, ...warnings, ...ai.warnings] };
+    const ai = await withAi(build, it.data.folder, o.data.useAi, async () => photos.slice(0, 4).map((x) => x.buf), catalog);
+    saved = [...saved, ...(await withStandard(saved, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
+    const final = saved.filter((x) => !saved.some((y) => y.sourceUrl === x.url));
+    const r = await saveImported(ai.draft, final, o.data, catalog);
+    return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
-    await deleteUnusedUploads(saved.map((s) => s.url));
+    await deleteUnusedUploads(saved.flatMap((s) => [s.url, s.sourceUrl]));
     return failImport(e, "importar da planilha");
   }
 }
@@ -294,29 +358,34 @@ async function readLarge(key: string) {
   return file?.body ?? null;
 }
 
-export async function importUploaded(item: z.input<typeof uploadedItem>, options: { publish: boolean; useAi: boolean }): Promise<ImportResult> {
+export async function importUploaded(item: z.input<typeof uploadedItem>, options: ImportOptions): Promise<ImportResult> {
   await requireAdmin();
   const it = uploadedItem.safeParse(item);
   const o = optionsSchema.safeParse(options);
   if (!it.success || !o.success) return { ok: false, error: "Dados inválidos." };
-  const { integrations } = await getSettings();
-  const { images, aiImages } = it.data;
+  const { aiImages } = it.data;
+  let images: (Saved & { sourceUrl?: string | null })[] = it.data.images;
   try {
-    const build = buildDraft(it.data.folder, it.data.dadosText);
-    await assertImportable(build);
+    const first = buildDraft(it.data.folder, it.data.dadosText);
+    await assertImportable(first);
+    const warnings: string[] = [];
+    const bc = await withBarcode(first, o.data.barcode, images.length > 0);
+    const build = bc.build;
+    images = [...images, ...(await barcodePhotos(bc.photoUrls, warnings)).map((x) => x.saved)];
     const catalog = await loadCatalog();
     const ai = await withAi(
       build,
       it.data.folder,
       o.data.useAi,
       async () => (await Promise.all((aiImages.length ? aiImages : images.slice(0, 4).map((x) => x.url)).map(readLarge))).filter((b) => b != null),
-      integrations.anthropicApiKey,
       catalog,
     );
-    const r = await saveImported(ai.draft, images, o.data, catalog);
-    return { ok: true, ...r, warnings: [...build.warnings, ...ai.warnings] };
+    images = [...images, ...(await withStandard(images, o.data.standardize, warnings)).filter((x) => x.sourceUrl)];
+    const final = images.filter((x) => !images.some((y) => y.sourceUrl === x.url));
+    const r = await saveImported(ai.draft, final, o.data, catalog);
+    return { ok: true, ...r, warnings: [...build.warnings, ...bc.warnings, ...warnings, ...ai.warnings] };
   } catch (e) {
-    await deleteUnusedUploads(images.map((s) => s.url));
+    await deleteUnusedUploads(images.flatMap((s) => [s.url, s.sourceUrl]));
     return failImport(e, "importar");
   } finally {
     // Fotos de apoio (caixa, manual) só servem para a IA.

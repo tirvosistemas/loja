@@ -34,7 +34,7 @@ export async function fetchImage(rawUrl: string, opts: { driveKey?: string; maxB
   const maxBytes = opts.maxBytes ?? MAX_DRIVE_PHOTO_BYTES;
   const driveId = driveFileId(rawUrl);
   if (driveId) {
-    if (!opts.driveKey) throw new Error("Foto no Google Drive: cadastre a chave do Drive em Configurações → Integrações.");
+    if (!opts.driveKey) throw new Error("Foto no Google Drive: cadastre a chave do Drive em Configurações → Ferramentas do catálogo.");
     return downloadFile({ id: driveId, name: "foto", mimeType: "", size: null }, opts.driveKey, maxBytes);
   }
 
