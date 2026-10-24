@@ -17,11 +17,16 @@ const MAX_PHOTOS = 12;
 type Detector = { detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]> };
 type DetectorCtor = new (opts: { formats: string[] }) => Detector;
 
-function getDetector(): DetectorCtor | null {
-  return typeof window !== "undefined" && "BarcodeDetector" in window ? ((window as unknown as { BarcodeDetector: DetectorCtor }).BarcodeDetector ?? null) : null;
+/** Leitor nativo (Chrome no Android); nos outros (iPhone, computador) carrega o leitor ZXing só quando abre a câmera. */
+async function getDetector(): Promise<DetectorCtor> {
+  const native = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
+  if (native) return native;
+  const zx = await import("barcode-detector/ponyfill");
+  await zx.prepareZXingModule({ fireImmediately: true });
+  return zx.BarcodeDetector as unknown as DetectorCtor;
 }
 
-/** Lê o código de barras pela câmera (celular). Só aparece onde o navegador tem BarcodeDetector. */
+/** Lê o código de barras pela câmera (celular ou webcam). */
 function CameraScan({ onCode }: { onCode: (code: string) => void }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,17 +34,21 @@ function CameraScan({ onCode }: { onCode: (code: string) => void }) {
   const [supported, setSupported] = useState(false);
   const onCodeRef = useRef(onCode);
   onCodeRef.current = onCode;
-  useEffect(() => setSupported(!!getDetector() && !!navigator.mediaDevices?.getUserMedia), []);
+  useEffect(() => setSupported(!!navigator.mediaDevices?.getUserMedia), []);
 
   useEffect(() => {
     if (!open) return;
-    const Ctor = getDetector();
-    if (!Ctor) return;
     let stream: MediaStream | null = null;
     let stop = false;
     let timer = 0;
-    const detector = new Ctor({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "itf"] });
     (async () => {
+      let detector: Detector;
+      try {
+        detector = new (await getDetector())({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "itf"] });
+      } catch {
+        if (!stop) setError("Não consegui carregar o leitor de código de barras. Confira a internet e tente de novo.");
+        return;
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         // Fechou antes da câmera abrir: a limpeza já rodou, então desliga aqui.
@@ -82,15 +91,13 @@ function CameraScan({ onCode }: { onCode: (code: string) => void }) {
       <Button
         type="button"
         variant="secondary"
-        size="icon"
-        aria-label="Ler código de barras com a câmera"
-        title="Ler com a câmera"
+        title="Ler o código de barras com a câmera"
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
       >
-        <Camera aria-hidden />
+        <Camera aria-hidden /> Câmera
       </Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Aponte para o código de barras" size="sm">
         {error ? (
@@ -204,17 +211,17 @@ export function EanField({
               . Confira antes de salvar para não ficar repetido.
             </span>
           ) : (
-            "Digite (ou bipe) e clique em Buscar: nome, marca, foto e medidas vêm sozinhos."
+            "Digite, bipe ou leia com a câmera: nome, marca, foto e medidas vêm sozinhos."
           )
         }
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
             id="p-ean"
             value={form.values.ean}
             inputMode="numeric"
             maxLength={14}
-            className="tabular min-w-0 flex-1 font-mono"
+            className="tabular min-w-0 flex-1 basis-full font-mono sm:basis-0"
             placeholder="7891234567890"
             aria-invalid={!!form.errors.ean}
             onChange={(ev) => {
