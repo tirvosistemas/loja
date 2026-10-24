@@ -356,7 +356,7 @@ export function CatalogForm({
           >
             <PlugZap aria-hidden /> Testar
           </Button>
-          <a href="https://cosmos.bluesoft.com.br/cadastro" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary">
+          <a href="https://cosmos.bluesoft.com.br/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary">
             Criar conta grátis no Cosmos <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </div>

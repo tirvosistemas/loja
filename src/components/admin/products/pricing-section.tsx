@@ -8,10 +8,9 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Switch } from "@/components/ui/switch";
 import { NumberInput } from "@/components/admin/settings/form-kit";
 import { formatBRL, pluralize } from "@/lib/format";
-import { cn, onlyDigits } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { priceBreakdown, suggestPrice, type PriceCalcConfig } from "@/lib/price-calc";
 import { FormField, FormSection, type FormApi } from "./form-kit";
-import { BarcodeTools } from "./barcode-tools";
 
 /** Sugere o preço pelo custo e mostra quanto sobra de verdade (taxa, imposto e embalagem). */
 function PriceCalculator({ form, cfg }: { form: FormApi; cfg: PriceCalcConfig }) {
@@ -84,17 +83,12 @@ export function PricingSection({
   form,
   active,
   price: priceCfg,
-  productId,
-  onBrandFound,
 }: {
   form: FormApi;
   active: boolean;
   price: PriceCalcConfig;
-  productId: string | null;
-  onBrandFound: (b: { id: string | null; name: string }) => void;
 }) {
   const { values: v, set, errors: e } = form;
-  const [existing, setExisting] = useState<{ id: string; name: string } | null>(null);
   const price = v.priceCents ?? 0;
   const cost = v.costCents;
   const profit = cost != null && price > 0 ? price - cost : null;
@@ -163,42 +157,6 @@ export function PricingSection({
             aria-invalid={!!e.sku}
             onChange={(ev) => set("sku", ev.target.value)}
           />
-        </FormField>
-        <FormField
-          name="ean"
-          label="EAN (código de barras)"
-          htmlFor="p-ean"
-          error={e.ean}
-          hint={
-            existing ? (
-              <span className="text-warning">
-                Já cadastrado:{" "}
-                <a href={`/admin/produtos/${existing.id}`} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-4">
-                  {existing.name}
-                </a>
-                . Confira antes de salvar para não ficar repetido.
-              </span>
-            ) : (
-              "Digite (ou bipe) e clique em Buscar: nome, marca, foto e medidas vêm sozinhos."
-            )
-          }
-        >
-          <div className="flex gap-2">
-            <Input
-              id="p-ean"
-              value={v.ean}
-              inputMode="numeric"
-              maxLength={14}
-              className="tabular min-w-0 flex-1 font-mono"
-              placeholder="7891234567890"
-              aria-invalid={!!e.ean}
-              onChange={(ev) => {
-                set("ean", onlyDigits(ev.target.value).slice(0, 14));
-                setExisting(null);
-              }}
-            />
-            <BarcodeTools form={form} productId={productId} onBrandFound={onBrandFound} onExisting={setExisting} />
-          </div>
         </FormField>
       </div>
 

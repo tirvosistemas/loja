@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Camera, ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { pluralize } from "@/lib/format";
+import { onlyDigits } from "@/lib/utils";
 import { barcodeLookupAction, type BarcodeLookupResult } from "@/app/admin/(panel)/produtos/tools-actions";
 import type { ProductFormValues } from "./form-values";
-import type { FormApi } from "./form-kit";
+import { FormField, type FormApi } from "./form-kit";
 
 const MAX_PHOTOS = 12;
 
@@ -140,19 +142,18 @@ export function barcodeSummary(b: Found, brand: BarcodeLookupResult["brand"], ph
   return `${head} Veio ${list}. Só os campos vazios foram preenchidos.`;
 }
 
-/** Botões ao lado do campo EAN: buscar na base e ler pela câmera. */
-export function BarcodeTools({
+/** Campo EAN no topo do cadastro: digitar ou bipar e buscar na base, ou ler pela câmera. */
+export function EanField({
   form,
   productId,
   onBrandFound,
-  onExisting,
 }: {
   form: FormApi;
   productId: string | null;
   onBrandFound: (b: { id: string | null; name: string }) => void;
-  onExisting: (p: { id: string; name: string } | null) => void;
 }) {
   const [pending, start] = useTransition();
+  const [existing, onExisting] = useState<{ id: string; name: string } | null>(null);
 
   const lookup = (raw: string) =>
     start(async () => {
@@ -181,22 +182,64 @@ export function BarcodeTools({
       // `form.values` é de quando clicou em Buscar; junta no estado atual para não perder o que mudou durante a busca.
       form.update((cur) => mergeBarcode(cur, code, b, brand?.id ?? null, photos));
       warnings.forEach((w) => toast.warning(w));
-      if (existing) toast.warning(`Este código já está cadastrado em ${existing.name}. Veja o link abaixo do campo EAN.`);
+      if (existing) toast.warning(`Este código já está cadastrado em ${existing.name}. Veja o link abaixo do código de barras.`);
       toast.success(barcodeSummary(b, brand, photos.length));
       if (brand && !brand.id && !v.brandId) toast.info(`A marca ${brand.name} ainda não está cadastrada. Crie com um clique no campo Marca.`);
     });
 
   return (
-    <div className="flex gap-2">
-      <Button type="button" variant="secondary" loading={pending} onClick={() => lookup(form.values.ean)} title="Buscar nome, marca, foto e medidas pelo código">
-        <ScanBarcode aria-hidden /> Buscar
-      </Button>
-      <CameraScan
-        onCode={(code) => {
-          form.set("ean", code.slice(0, 14));
-          lookup(code);
-        }}
-      />
+    <div className="rounded-2xl border border-dashed border-border-strong bg-elevated/40 px-4 py-3">
+      <FormField
+        name="ean"
+        label="Código de barras (EAN)"
+        htmlFor="p-ean"
+        error={form.errors.ean}
+        hint={
+          existing ? (
+            <span className="text-warning">
+              Já cadastrado:{" "}
+              <a href={`/admin/produtos/${existing.id}`} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-4">
+                {existing.name}
+              </a>
+              . Confira antes de salvar para não ficar repetido.
+            </span>
+          ) : (
+            "Digite (ou bipe) e clique em Buscar: nome, marca, foto e medidas vêm sozinhos."
+          )
+        }
+      >
+        <div className="flex gap-2">
+          <Input
+            id="p-ean"
+            value={form.values.ean}
+            inputMode="numeric"
+            maxLength={14}
+            className="tabular min-w-0 flex-1 font-mono"
+            placeholder="7891234567890"
+            aria-invalid={!!form.errors.ean}
+            onChange={(ev) => {
+              form.set("ean", onlyDigits(ev.target.value).slice(0, 14));
+              onExisting(null);
+            }}
+            onKeyDown={(ev) => {
+              // Leitor USB/Bluetooth manda Enter no fim: busca em vez de salvar o produto.
+              if (ev.key === "Enter") {
+                ev.preventDefault();
+                if (!pending) lookup(ev.currentTarget.value);
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" loading={pending} onClick={() => lookup(form.values.ean)} title="Buscar nome, marca, foto e medidas pelo código">
+            <ScanBarcode aria-hidden /> Buscar
+          </Button>
+          <CameraScan
+            onCode={(code) => {
+              form.set("ean", code.slice(0, 14));
+              lookup(code);
+            }}
+          />
+        </div>
+      </FormField>
     </div>
   );
 }

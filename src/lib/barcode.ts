@@ -77,7 +77,11 @@ async function cosmos(code: string, token: string): Promise<BarcodeResult | null
   }
   if (res.status === 404) return null;
   if (res.status === 401 || res.status === 403) throw new BarcodeError("Token do Cosmos recusado. Confira em Configurações → Ferramentas do catálogo.");
-  if (res.status === 429) throw new BarcodeError("Limite diário de consultas do Cosmos atingido.");
+  if (res.status === 429) {
+    // Conta nova também cai aqui enquanto o Cosmos não libera a API; mostra o que ele disse.
+    const said = clean(((await res.json().catch(() => null)) as { message?: unknown } | null)?.message);
+    throw new BarcodeError(`O Cosmos recusou a consulta por limite${said ? ` (“${said}”)` : ""}. Confira no site do Cosmos se a conta está confirmada e quantas consultas o seu plano dá por dia.`);
+  }
   if (!res.ok) throw new BarcodeError(`O Cosmos respondeu com erro (${res.status}).`);
   const j = (await res.json()) as {
     description?: string;

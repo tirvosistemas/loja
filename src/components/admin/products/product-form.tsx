@@ -25,11 +25,12 @@ import { VariantsSection } from "./variants-section";
 import { SpecsSection } from "./specs-section";
 import { SeoSection } from "./seo-section";
 import { AiFillButton } from "./ai-fill";
+import { EanField } from "./barcode-tools";
 
 const SECTIONS = [
-  { id: "informacoes", label: "Informações", icon: FileText, fields: ["name", "shortDescription", "description", "categoryId", "brandId", "status", "featured", "isNew", "freeShipping", "tags"] },
+  { id: "informacoes", label: "Informações", icon: FileText, fields: ["ean", "name", "shortDescription", "description", "categoryId", "brandId", "status", "featured", "isNew", "freeShipping", "tags"] },
   { id: "fotos", label: "Fotos", icon: Images, fields: ["images", "videoUrl"] },
-  { id: "preco", label: "Preço e estoque", icon: Tag, fields: ["priceCents", "compareAtCents", "costCents", "sku", "ean", "trackStock", "stock", "allowBackorder", "lowStockAlert"] },
+  { id: "preco", label: "Preço e estoque", icon: Tag, fields: ["priceCents", "compareAtCents", "costCents", "sku", "trackStock", "stock", "allowBackorder", "lowStockAlert"] },
   { id: "variacoes", label: "Variações", icon: Layers, fields: ["variantLabel", "variants"] },
   { id: "ficha", label: "Ficha técnica", icon: ListChecks, fields: ["voltage", "warrantyMonths", "model", "color", "weightGrams", "widthCm", "heightCm", "depthCm", "specs"] },
   { id: "seo", label: "SEO", icon: Search, fields: ["slug", "metaTitle", "metaDescription"] },
@@ -416,6 +417,7 @@ export function ProductForm({
           </div>
 
           <div className="space-y-6">
+            <EanField form={form} productId={productId} onBrandFound={brandFound} />
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-border-strong bg-elevated/40 px-4 py-3">
               <p className="min-w-0 text-sm text-muted-foreground">
                 {tools.aiName ? `Atalho: a IA (${tools.aiName}) lê as fotos e preenche o que falta.` : "Atalho: com uma IA configurada, as fotos viram descrição, ficha técnica e SEO."}
@@ -432,7 +434,7 @@ export function ProductForm({
               onBrandCreated={addBrand}
             />
             <MediaSection form={form} active={tab === "fotos"} photoStandard={tools.photoStandard} />
-            <PricingSection form={form} active={tab === "preco"} price={tools.price} productId={productId} onBrandFound={brandFound} />
+            <PricingSection form={form} active={tab === "preco"} price={tools.price} />
             <VariantsSection form={form} active={tab === "variacoes"} />
             <SpecsSection form={form} active={tab === "ficha"} />
             <SeoSection form={form} active={tab === "seo"} storeName={storeName} siteHost={siteHost} isNew={isNew} />
