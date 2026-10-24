@@ -4,7 +4,7 @@ import { adjustPrice, applyEnding, priceBreakdown, suggestPrice, type PriceCalcC
 import { applySheet, diffRow, rowsToSheet, sheetToCsv, type BulkRow } from "@/lib/admin/bulk";
 import { buildXlsx } from "@/lib/xlsx-write";
 import { parseCsv, parseXlsx } from "@/lib/importer/sheet";
-import { dimensionsToCm, isValidGtin, tidyTitle, weightToGrams } from "@/lib/barcode";
+import { dimensionsToCm, fromOpenFacts, isValidGtin, tidyTitle, weightToGrams } from "@/lib/barcode";
 import { pickModel } from "@/lib/ai/providers";
 import { looseParse } from "@/lib/ai/client";
 import { buildLegalPage, legalMissing } from "@/lib/legal-pages";
@@ -114,6 +114,20 @@ describe("código de barras", () => {
     expect(dimensionsToCm("10 X 5 X 2 inches")).toEqual({ width: 25.4, height: 12.7, depth: 5.1 });
     expect(tidyTitle("FONE DE OUVIDO BLUETOOTH JBL")).toBe("Fone De Ouvido Bluetooth JBL");
     expect(tidyTitle("Cabo USB-C")).toBe("Cabo USB-C");
+  });
+  it("lê o produto do Open Food Facts", () => {
+    const r = fromOpenFacts("7891000100103", "Open Food Facts", {
+      product_name_pt: "Leite condensado",
+      brands: "Moça,Nestlé",
+      quantity: "395 g",
+      product_quantity: "395",
+      product_quantity_unit: "g",
+      image_front_url: "https://images.openfoodfacts.org/x.jpg",
+      categories_tags_pt: ["Laticínios", "Leite condensado"],
+    });
+    expect(r).toMatchObject({ name: "Leite condensado 395 g", brand: "Moça", weightGrams: 395, category: "Leite condensado", images: ["https://images.openfoodfacts.org/x.jpg"] });
+    expect(fromOpenFacts("1", "Open Food Facts", { product_name: "Refrigerante 2L", product_quantity: 2000, product_quantity_unit: "ml" })).toMatchObject({ name: "Refrigerante 2L", weightGrams: null });
+    expect(fromOpenFacts("1", "Open Food Facts", { brands: "X" })).toBeNull();
   });
 });
 

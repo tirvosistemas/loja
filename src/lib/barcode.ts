@@ -1,9 +1,17 @@
-// Busca de produto pelo código de barras (EAN/GTIN). Primeiro no Cosmos (Bluesoft), a base
-// brasileira, quando há token; senão (ou sem resultado) na UPCitemdb, gratuita e sem chave
-// (100 consultas por dia, 6 por minuto). Devolve só o que a base informa; nada é inventado.
+// Busca de produto pelo código de barras (EAN/GTIN). Primeiro no Cosmos (Bluesoft, pago),
+// quando há token; depois nas bases abertas e gratuitas Open Food/Beauty/Pet Food/Products
+// Facts (sem chave nem cota diária); por fim na UPCitemdb, gratuita e sem chave (100 consultas
+// por dia, 6 por minuto). Devolve só o que a base informa; nada é inventado.
+
+const OPEN_FACTS = [
+  ["Open Food Facts", "world.openfoodfacts.org"],
+  ["Open Beauty Facts", "world.openbeautyfacts.org"],
+  ["Open Pet Food Facts", "world.openpetfoodfacts.org"],
+  ["Open Products Facts", "world.openproductsfacts.org"],
+] as const;
 
 export type BarcodeResult = {
-  source: "Cosmos" | "UPCitemdb";
+  source: "Cosmos" | (typeof OPEN_FACTS)[number][0] | "UPCitemdb";
   ean: string;
   name: string | null;
   brand: string | null;
@@ -111,6 +119,67 @@ async function cosmos(code: string, token: string): Promise<BarcodeResult | null
   };
 }
 
+export type OpenFactsProduct = {
+  product_name_pt?: string;
+  product_name?: string;
+  brands?: string;
+  quantity?: string;
+  product_quantity?: number | string;
+  product_quantity_unit?: string;
+  image_front_url?: string;
+  image_url?: string;
+  categories_tags_pt?: string[];
+};
+
+/** Produto das bases Open*Facts no formato da loja. Peso só quando vem em g/kg (líquido em ml fica vazio). */
+export function fromOpenFacts(code: string, source: BarcodeResult["source"], p: OpenFactsProduct): BarcodeResult | null {
+  let name = clean(p.product_name_pt) ?? clean(p.product_name);
+  if (!name) return null;
+  const qty = clean(p.quantity);
+  if (qty && !/\d/.test(name)) name = `${name} ${qty}`;
+  const n = Number(p.product_quantity);
+  const unit = p.product_quantity_unit?.toLowerCase();
+  const image = [p.image_front_url, p.image_url].find((u) => typeof u === "string" && /^https:\/\//.test(u));
+  return {
+    source,
+    ean: code,
+    name: tidyTitle(name),
+    brand: clean(p.brands?.split(",")[0]),
+    model: null,
+    color: null,
+    description: null,
+    category: clean(p.categories_tags_pt?.at(-1)),
+    images: image ? [image] : [],
+    weightGrams: unit === "g" ? grams(n) : unit === "kg" ? grams(n * 1000) : null,
+    widthCm: null,
+    heightCm: null,
+    depthCm: null,
+  };
+}
+
+async function openFactsAt(code: string, source: BarcodeResult["source"], host: string): Promise<BarcodeResult | null> {
+  const fields = "product_name_pt,product_name,brands,quantity,product_quantity,product_quantity_unit,image_front_url,image_url,categories_tags_pt";
+  try {
+    const res = await fetch(`https://${host}/api/v2/product/${code}.json?fields=${fields}`, {
+      // As bases pedem um User-Agent que identifique o app.
+      headers: { Accept: "application/json", "User-Agent": "TirvoLoja/1.0 (+https://github.com/tirvosistemas/loja)" },
+      signal: AbortSignal.timeout(TIMEOUT),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { status?: number; product?: OpenFactsProduct };
+    return j.status === 1 && j.product ? fromOpenFacts(code, source, j.product) : null;
+  } catch {
+    return null; // fora do ar: segue para a próxima base
+  }
+}
+
+/** As quatro bases ao mesmo tempo; vale a primeira da lista que achar. */
+async function openFacts(code: string) {
+  const found = await Promise.all(OPEN_FACTS.map(([source, host]) => openFactsAt(code, source, host)));
+  return found.find(Boolean) ?? null;
+}
+
 /** "1.2 lb" / "500 g" / "3 oz" → gramas. */
 export function weightToGrams(s: string | null): number | null {
   const m = s?.toLowerCase().replace(",", ".").match(/([\d.]+)\s*(kg|g|lbs?|pounds?|oz|ounces?)\b/);
@@ -136,7 +205,7 @@ export function dimensionsToCm(s: string | null): { width: number; height: numbe
 const UPC_GAP = 10_000;
 const UPC_CACHE_MAX = 500;
 const UPC_CACHE_TTL = 24 * 3600_000;
-const DAILY_LIMIT = "Limite diário da base gratuita atingido. Cadastre um token do Cosmos para mais consultas.";
+const DAILY_LIMIT = "Não achei nas bases abertas, e a base internacional (UPCitemdb) atingiu o limite de hoje. Tente amanhã ou preencha à mão.";
 let upcQueue: Promise<unknown> = Promise.resolve();
 let upcLast = 0;
 let upcBlockedUntil = 0; // cota do dia esgotada
@@ -234,6 +303,8 @@ export async function lookupBarcode(raw: string, cosmosToken: string): Promise<B
       cosmosError = e;
     }
   }
+  const open = await openFacts(code);
+  if (open) return open;
   const r = await upcitemdb(code).catch((e) => {
     throw cosmosError ?? e;
   });

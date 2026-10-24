@@ -325,7 +325,7 @@ export function CatalogForm({
           label="Token do Cosmos (código de barras)"
           htmlFor="c-cosmos"
           error={e.cosmosToken}
-          hint={!previews.cosmosToken ? "Base brasileira de produtos por código de barras. Sem token, a busca usa uma base gratuita internacional (100 consultas por dia)." : undefined}
+          hint={!previews.cosmosToken ? "Opcional e pago. Sem token, a busca usa bases gratuitas: Open Food Facts (alimentos, bebidas, cosméticos e pet, sem limite) e UPCitemdb (internacional, 100 por dia)." : undefined}
         >
           <SecretInput
             id="c-cosmos"
@@ -357,7 +357,7 @@ export function CatalogForm({
             <PlugZap aria-hidden /> Testar
           </Button>
           <a href="https://cosmos.bluesoft.com.br/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary">
-            Criar conta grátis no Cosmos <ExternalLink className="size-3.5" aria-hidden />
+            Site do Cosmos (plano pago) <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </div>
         {cosmos && <Result ok={cosmos.ok}>{cosmos.text}</Result>}
