@@ -10,7 +10,6 @@ import { maskSecret } from "@/lib/crypto";
 import { AI_PROVIDER_IDS, CLEAR_SECRET, getSettings, saveSettingsGroup, type AiProviderId } from "@/lib/settings";
 import { AI_PROVIDERS, aiProvider, pickModel } from "@/lib/ai/providers";
 import { aiErrorMessage, aiJson, listModels } from "@/lib/ai/client";
-import { BarcodeError, lookupBarcode } from "@/lib/barcode";
 import { readPhoto, standardizePreview } from "@/lib/photos";
 import { isUploadKey } from "@/lib/images";
 
@@ -151,8 +150,6 @@ const watermarkSrc = z
 const catalogInput = z.object({
   googleDriveApiKey: keyText,
   clearGoogleDriveApiKey: z.boolean(),
-  cosmosToken: keyText,
-  clearCosmosToken: z.boolean(),
   feeCardPercent: percent(30),
   feePixPercent: percent(30),
   taxPercent: percent(40),
@@ -172,7 +169,7 @@ const catalogInput = z.object({
 });
 
 export type CatalogSettingsInput = z.input<typeof catalogInput>;
-export type CatalogPreviews = { googleDriveApiKey: string; cosmosToken: string };
+export type CatalogPreviews = { googleDriveApiKey: string };
 
 export async function saveCatalogSettings(input: CatalogSettingsInput): Promise<ActionResult<{ previews: CatalogPreviews }>> {
   await requireAdmin(ROLES);
@@ -184,35 +181,19 @@ export async function saveCatalogSettings(input: CatalogSettingsInput): Promise<
   }
   if (v.watermarkEnabled && !v.watermarkImage) return fail("Escolha a imagem da marca d'água.", { watermarkImage: "Escolha um logo ou envie uma imagem." });
   try {
-    const { googleDriveApiKey, clearGoogleDriveApiKey, cosmosToken, clearCosmosToken, ...rest } = v;
+    const { googleDriveApiKey, clearGoogleDriveApiKey, ...rest } = v;
     const saved = await saveSettingsGroup("catalog", {
       ...rest,
       googleDriveApiKey: clearGoogleDriveApiKey ? CLEAR_SECRET : googleDriveApiKey,
-      cosmosToken: clearCosmosToken ? CLEAR_SECRET : cosmosToken,
     });
     return {
       ok: true,
-      data: { previews: { googleDriveApiKey: maskSecret(saved.googleDriveApiKey), cosmosToken: maskSecret(saved.cosmosToken) } },
+      data: { previews: { googleDriveApiKey: maskSecret(saved.googleDriveApiKey) } },
       message: done("Ferramentas do catálogo salvas."),
     };
   } catch (e) {
     console.error("[configurações] falha ao salvar catálogo:", e);
     return fail("Não foi possível salvar agora. Tente de novo.");
-  }
-}
-
-/** Testa o token do Cosmos (o digitado ou o salvo) com um código conhecido. */
-export async function testCosmosAction(token?: string): Promise<ActionResult<{ name: string; source: string }>> {
-  await requireAdmin(ROLES);
-  const t = keyText.safeParse(token ?? "");
-  const key = (t.success && t.data) || (await getSettings()).catalog.cosmosToken;
-  if (!key) return fail("Cole o token do Cosmos para testar.");
-  try {
-    const r = await lookupBarcode("7894900011517", key);
-    if (!r?.name) return fail("O Cosmos não devolveu o produto de teste.");
-    return { ok: true, data: { name: r.name, source: r.source }, message: r.source === "Cosmos" ? "Token do Cosmos funcionando." : "O Cosmos não respondeu; a busca usou a base gratuita." };
-  } catch (e) {
-    return fail(e instanceof BarcodeError ? e.message : "Não foi possível testar agora.");
   }
 }
 

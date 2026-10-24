@@ -55,7 +55,7 @@ describe("padronizar fotos: junta no estado atual", () => {
 
 describe("código de barras: junta no estado atual", () => {
   const found = {
-    source: "Cosmos" as const,
+    source: "UPCitemdb" as const,
     ean: "7891234567895",
     name: "Fone JBL Tune 520BT",
     brand: "JBL",
@@ -88,9 +88,9 @@ describe("código de barras: junta no estado atual", () => {
   });
 
   it("resume o que veio da base sem depender do formulário", () => {
-    expect(barcodeSummary(found, { id: "b1", name: "JBL" }, 2)).toBe("Encontrado no Cosmos: Fone JBL Tune 520BT. Veio nome, marca, modelo, medidas e 2 fotos. Só os campos vazios foram preenchidos.");
-    expect(barcodeSummary({ ...found, model: null, weightGrams: null }, { id: null, name: "JBL" }, 0)).toBe("Encontrado no Cosmos: Fone JBL Tune 520BT. Veio nome. Só os campos vazios foram preenchidos.");
-    expect(barcodeSummary({ ...found, name: null, model: null, weightGrams: null }, null, 0)).toBe("Encontrado no Cosmos: produto. A base não trouxe outros dados.");
+    expect(barcodeSummary(found, { id: "b1", name: "JBL" }, 2)).toBe("Encontrado no UPCitemdb: Fone JBL Tune 520BT. Veio nome, marca, modelo, medidas e 2 fotos. Só os campos vazios foram preenchidos.");
+    expect(barcodeSummary({ ...found, model: null, weightGrams: null }, { id: null, name: "JBL" }, 0)).toBe("Encontrado no UPCitemdb: Fone JBL Tune 520BT. Veio nome. Só os campos vazios foram preenchidos.");
+    expect(barcodeSummary({ ...found, name: null, model: null, weightGrams: null }, null, 0)).toBe("Encontrado no UPCitemdb: produto. A base não trouxe outros dados.");
   });
 });
 

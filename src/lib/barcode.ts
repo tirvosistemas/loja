@@ -1,7 +1,6 @@
-// Busca de produto pelo código de barras (EAN/GTIN). Primeiro no Cosmos (Bluesoft, pago),
-// quando há token; depois nas bases abertas e gratuitas Open Food/Beauty/Pet Food/Products
-// Facts (sem chave nem cota diária); por fim na UPCitemdb, gratuita e sem chave (100 consultas
-// por dia, 6 por minuto). Devolve só o que a base informa; nada é inventado.
+// Busca de produto pelo código de barras (EAN/GTIN). Primeiro nas bases abertas e gratuitas
+// Open Food/Beauty/Pet Food/Products Facts (sem chave nem cota diária); depois na UPCitemdb,
+// gratuita e sem chave (100 consultas por dia, 6 por minuto). Devolve só o que a base informa; nada é inventado.
 
 const OPEN_FACTS = [
   ["Open Food Facts", "world.openfoodfacts.org"],
@@ -11,7 +10,7 @@ const OPEN_FACTS = [
 ] as const;
 
 export type BarcodeResult = {
-  source: "Cosmos" | (typeof OPEN_FACTS)[number][0] | "UPCitemdb";
+  source: (typeof OPEN_FACTS)[number][0] | "UPCitemdb";
   ean: string;
   name: string | null;
   brand: string | null;
@@ -70,53 +69,6 @@ export function tidyTitle(s: string | null) {
     .split(" ")
     .map((t) => (/\d/.test(t) ? t : t.replace(/[\p{L}\p{M}]+/gu, (w) => (ACRONYMS.has(w) ? w : w[0] + w.slice(1).toLowerCase()))))
     .join(" ");
-}
-
-async function cosmos(code: string, token: string): Promise<BarcodeResult | null> {
-  let res: Response;
-  try {
-    res = await fetch(`https://api.cosmos.bluesoft.com.br/gtins/${code}.json`, {
-      headers: { "X-Cosmos-Token": token, "User-Agent": "Cosmos-API-Request", "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT),
-      cache: "no-store",
-    });
-  } catch {
-    throw new BarcodeError("Não foi possível falar com o Cosmos agora.");
-  }
-  if (res.status === 404) return null;
-  if (res.status === 401 || res.status === 403) throw new BarcodeError("Token do Cosmos recusado. Confira em Configurações → Ferramentas do catálogo.");
-  if (res.status === 429) {
-    // Conta nova também cai aqui enquanto o Cosmos não libera a API; mostra o que ele disse.
-    const said = clean(((await res.json().catch(() => null)) as { message?: unknown } | null)?.message);
-    throw new BarcodeError(`O Cosmos recusou a consulta por limite${said ? ` (“${said}”)` : ""}. Confira no site do Cosmos se a conta está confirmada e quantas consultas o seu plano dá por dia.`);
-  }
-  if (!res.ok) throw new BarcodeError(`O Cosmos respondeu com erro (${res.status}).`);
-  const j = (await res.json()) as {
-    description?: string;
-    thumbnail?: string;
-    brand?: { name?: string };
-    gross_weight?: number;
-    net_weight?: number;
-    width?: number;
-    height?: number;
-    length?: number;
-    gpc?: { description?: string };
-  };
-  return {
-    source: "Cosmos",
-    ean: code,
-    name: tidyTitle(clean(j.description)),
-    brand: clean(j.brand?.name),
-    model: null,
-    color: null,
-    description: null,
-    category: clean(j.gpc?.description),
-    images: j.thumbnail && /^https:\/\//.test(j.thumbnail) ? [j.thumbnail] : [],
-    weightGrams: grams(j.gross_weight) ?? grams(j.net_weight),
-    widthCm: cm(j.width),
-    heightCm: cm(j.height),
-    depthCm: cm(j.length),
-  };
 }
 
 export type OpenFactsProduct = {
@@ -289,26 +241,10 @@ function remember(code: string, r: BarcodeResult | null) {
 }
 
 /** Procura o código nas bases. null = não encontrado em nenhuma. */
-export async function lookupBarcode(raw: string, cosmosToken: string): Promise<BarcodeResult | null> {
+export async function lookupBarcode(raw: string): Promise<BarcodeResult | null> {
   const digits = raw.replace(/\D/g, "");
   // UPC-E que não fecha como EAN-8 é buscado por extenso (UPC-A).
   const code = isValidGtin(digits) ? digits : (upcEToUpcA(digits) ?? digits);
   if (!isValidGtin(code)) throw new BarcodeError("Código de barras inválido. Confira os números (8, 12, 13 ou 14 dígitos).");
-  let cosmosError: unknown = null;
-  if (cosmosToken) {
-    try {
-      const r = await cosmos(code, cosmosToken);
-      if (r?.name) return r;
-    } catch (e) {
-      cosmosError = e;
-    }
-  }
-  const open = await openFacts(code);
-  if (open) return open;
-  const r = await upcitemdb(code).catch((e) => {
-    throw cosmosError ?? e;
-  });
-  if (r) return r;
-  if (cosmosError) throw cosmosError;
-  return null;
+  return (await openFacts(code)) ?? (await upcitemdb(code));
 }

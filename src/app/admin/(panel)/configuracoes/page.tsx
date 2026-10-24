@@ -97,11 +97,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       break;
     }
     case "catalogo": {
-      const { googleDriveApiKey, cosmosToken, ...c } = s.catalog;
+      const { googleDriveApiKey, ...c } = s.catalog;
       content = (
         <CatalogForm
-          initial={{ ...c, googleDriveApiKey: "", clearGoogleDriveApiKey: false, cosmosToken: "", clearCosmosToken: false }}
-          previews={{ googleDriveApiKey: maskSecret(googleDriveApiKey), cosmosToken: maskSecret(cosmosToken) }}
+          initial={{ ...c, googleDriveApiKey: "", clearGoogleDriveApiKey: false }}
+          previews={{ googleDriveApiKey: maskSecret(googleDriveApiKey) }}
           brandLogos={BRAND_WATERMARKS}
           feedUrls={{ google: absoluteUrl("/feeds/google.xml"), meta: absoluteUrl("/feeds/meta.csv"), csv: absoluteUrl("/feeds/catalogo.csv") }}
         />

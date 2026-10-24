@@ -53,7 +53,7 @@ describe("busca pelo código de barras", () => {
     vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
   });
   const load = async () => (await import("@/lib/barcode")).lookupBarcode;
-  // As bases Open*Facts não acham nada; o `fetch` do teste recebe só o resto (Cosmos e UPCitemdb).
+  // As bases Open*Facts não acham nada; o `fetch` do teste recebe só a UPCitemdb.
   const stub = (fetch: (url: string) => Promise<Response>) => vi.stubGlobal("fetch", (url: string) => (url.includes("facts.org/") ? json({ status: 0 }, 404) : fetch(url)));
 
   it("acha nas bases Open*Facts antes da UPCitemdb", async () => {
@@ -61,44 +61,38 @@ describe("busca pelo código de barras", () => {
       url.includes("openbeautyfacts") ? json({ status: 1, product: { product_name_pt: "Protetor solar FPS 50", brands: "Sundown", quantity: "200 ml" } }) : json({ status: 0 }, 404),
     );
     vi.stubGlobal("fetch", fetch);
-    expect(await (await load())("7891010031855", "")).toMatchObject({ source: "Open Beauty Facts", name: "Protetor solar FPS 50", brand: "Sundown", weightGrams: null });
+    expect(await (await load())("7891010031855")).toMatchObject({ source: "Open Beauty Facts", name: "Protetor solar FPS 50", brand: "Sundown", weightGrams: null });
     expect(fetch.mock.calls.some(([u]) => u.includes("upcitemdb"))).toBe(false);
   });
 
   it("busca UPC-E como UPC-A e devolve o código buscado", async () => {
     const fetch = vi.fn(async (_url: string) => json({ items: [{ title: "Pilha AA" }] }));
     stub(fetch);
-    const r = await (await load())("04252614", "");
+    const r = await (await load())("04252614");
     expect(r?.ean).toBe("042100005264");
     expect(fetch.mock.calls[0][0]).toContain("upc=042100005264");
-  });
-
-  it("Cosmos: peso em gramas inteiras, medida fora do limite fica de fora e marca como veio", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ description: "FONE DE OUVIDO JBL TUNE 510BT", brand: { name: "JBL" }, gross_weight: 395.5, width: 2000, height: 18.5, length: 6 })));
-    const r = await (await load())("7891234567895", "token");
-    expect(r).toMatchObject({ source: "Cosmos", name: "Fone De Ouvido JBL Tune 510BT", brand: "JBL", weightGrams: 396, widthCm: null, heightCm: 18.5, depthCm: 6 });
   });
 
   it("UPCitemdb: uma consulta a cada 10 s, a primeira na hora, e guarda o resultado", async () => {
     const fetch = vi.fn(async (url: string) => (url.includes("7891000000014") ? json({ code: "OK", items: [] }) : json({ items: [{ title: "Fone", brand: "baseus" }] })));
     stub(fetch);
     const lookup = await load();
-    expect(await lookup("7891234567895", "")).toMatchObject({ name: "Fone", brand: "baseus" });
-    const second = lookup("7891000000014", "");
+    expect(await lookup("7891234567895")).toMatchObject({ name: "Fone", brand: "baseus" });
+    const second = lookup("7891000000014");
     await vi.advanceTimersByTimeAsync(9_999);
     expect(fetch).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(await second).toBeNull();
     // Já consultados (inclusive o não encontrado) não gastam a cota.
-    expect(await lookup("7891234567895", "")).toMatchObject({ name: "Fone" });
-    expect(await lookup("7891000000014", "")).toBeNull();
+    expect(await lookup("7891234567895")).toMatchObject({ name: "Fone" });
+    expect(await lookup("7891000000014")).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("UPCitemdb rápido demais: espera e tenta mais uma vez", async () => {
     const fetch = vi.fn().mockResolvedValueOnce(json({ code: "TOO_FAST" }, 429)).mockResolvedValueOnce(json({ items: [{ title: "Fone" }] }));
     stub(fetch);
-    const p = (await load())("7891234567895", "");
+    const p = (await load())("7891234567895");
     await vi.advanceTimersByTimeAsync(29_999);
     expect(fetch).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
@@ -108,7 +102,7 @@ describe("busca pelo código de barras", () => {
   it("UPCitemdb ainda rápido demais depois de esperar: aviso próprio, não o de limite diário", async () => {
     const fetch = vi.fn(async () => json({ code: "TOO_FAST" }, 429));
     stub(fetch);
-    const check = expect((await load())("7891234567895", "")).rejects.toThrow("Muitas consultas seguidas");
+    const check = expect((await load())("7891234567895")).rejects.toThrow("Muitas consultas seguidas");
     await vi.advanceTimersByTimeAsync(30_000);
     await check;
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -118,8 +112,8 @@ describe("busca pelo código de barras", () => {
     const fetch = vi.fn(async () => json({ code: "EXCEED_LIMIT" }, 429));
     stub(fetch);
     const lookup = await load();
-    await expect(lookup("7891234567895", "")).rejects.toThrow("limite de hoje");
-    await expect(lookup("7891000000014", "")).rejects.toThrow("limite de hoje");
+    await expect(lookup("7891234567895")).rejects.toThrow("limite de hoje");
+    await expect(lookup("7891000000014")).rejects.toThrow("limite de hoje");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
@@ -203,7 +197,7 @@ describe("importação com código de barras e fotos padronizadas", () => {
       deleteUnusedUploads: vi.fn(async () => {}),
     };
     vi.doMock("@/lib/auth", () => ({ requireAdmin: vi.fn() }));
-    vi.doMock("@/lib/settings", () => ({ getSettings: async () => ({ catalog: { cosmosToken: "" } }) }));
+    vi.doMock("@/lib/settings", () => ({ getSettings: async () => ({ catalog: {} }) }));
     vi.doMock("@/lib/uploads", () => ({ deleteImage: vi.fn(async () => {}), readUpload: async () => ({ body: Buffer.from("foto") }), saveImage: vi.fn() }));
     vi.doMock("@/lib/admin/uploads", () => ({ deleteUnusedUploads: m.deleteUnusedUploads }));
     vi.doMock("@/lib/ai/client", () => ({ aiErrorMessage: () => "erro", getAiConfig: async () => ({ provider: "x" }), MAX_AI_IMAGES: 8 }));

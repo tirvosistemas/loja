@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calculator, CheckCircle2, ExternalLink, FolderInput, ImageIcon, PlugZap, Rss, XCircle } from "lucide-react";
+import { Calculator, CheckCircle2, ExternalLink, FolderInput, ImageIcon, Rss, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Select } from "@/components/ui/input";
@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import {
   previewPhotoStandard,
   saveCatalogSettings,
-  testCosmosAction,
   type CatalogPreviews,
   type CatalogSettingsInput,
 } from "@/app/admin/(panel)/configuracoes/tools-actions";
@@ -63,12 +62,10 @@ export function CatalogForm({
   const f = useSettingsForm(initial, saveCatalogSettings, {
     onSaved: (data, values) => {
       if (data) setPreviews(data.previews);
-      return { ...values, googleDriveApiKey: "", clearGoogleDriveApiKey: false, cosmosToken: "", clearCosmosToken: false };
+      return { ...values, googleDriveApiKey: "", clearGoogleDriveApiKey: false };
     },
   });
   const { values: v, set, errors: e } = f;
-  const [cosmos, setCosmos] = useState<{ ok: boolean; text: string } | null>(null);
-  const [testingCosmos, startCosmos] = useTransition();
   const [preview, setPreview] = useState<{ before: string; after: string } | null>(null);
   const [previewing, startPreview] = useTransition();
   const [sampleCost, setSampleCost] = useState<number | null>(5000);
@@ -319,48 +316,6 @@ export function CatalogForm({
             Ativar a Drive API <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </div>
-
-        <SettingsField
-          name="cosmosToken"
-          label="Token do Cosmos (código de barras)"
-          htmlFor="c-cosmos"
-          error={e.cosmosToken}
-          hint={!previews.cosmosToken ? "Opcional e pago. Sem token, a busca usa bases gratuitas: Open Food Facts (alimentos, bebidas, cosméticos e pet, sem limite) e UPCitemdb (internacional, 100 por dia)." : undefined}
-        >
-          <SecretInput
-            id="c-cosmos"
-            value={v.cosmosToken}
-            onChange={(x) => set("cosmosToken", x)}
-            preview={previews.cosmosToken}
-            cleared={v.clearCosmosToken}
-            onClearChange={(c) => f.patch({ clearCosmosToken: c, cosmosToken: "" })}
-            invalid={!!e.cosmosToken}
-          />
-        </SettingsField>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            loading={testingCosmos}
-            disabled={(!v.cosmosToken && !previews.cosmosToken) || v.clearCosmosToken}
-            onClick={() =>
-              startCosmos(async () => {
-                try {
-                  const r = await testCosmosAction(v.cosmosToken || undefined);
-                  setCosmos(r.ok ? { ok: true, text: `${r.message} Produto de teste: ${r.data?.name}` } : { ok: false, text: r.error });
-                } catch {
-                  setCosmos({ ok: false, text: "Falha de conexão. Tente de novo." });
-                }
-              })
-            }
-          >
-            <PlugZap aria-hidden /> Testar
-          </Button>
-          <a href="https://cosmos.bluesoft.com.br/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary">
-            Site do Cosmos (plano pago) <ExternalLink className="size-3.5" aria-hidden />
-          </a>
-        </div>
-        {cosmos && <Result ok={cosmos.ok}>{cosmos.text}</Result>}
       </Section>
 
       <Section

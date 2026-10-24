@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getSettings } from "@/lib/settings";
 import { fail, type ActionResult } from "@/lib/action";
 import { isUploadKey } from "@/lib/images";
 import { saveImage } from "@/lib/uploads";
@@ -103,8 +102,7 @@ export async function barcodeLookupAction(ean: string, maxImages: number, curren
   const limit = Math.max(0, Math.min(6, Math.trunc(Number(maxImages) || 0)));
   const selfId = typeof currentId === "string" && currentId ? currentId.slice(0, 40) : null;
   try {
-    const { catalog: cfg } = await getSettings();
-    const result = await lookupBarcode(code, cfg.cosmosToken);
+    const result = await lookupBarcode(code);
     const eans = [...new Set([code, result?.ean ?? ""])].filter(Boolean);
     const existing = await db.product.findFirst({ where: { ean: { in: eans }, ...(selfId ? { id: { not: selfId } } : {}) }, select: { id: true, name: true } });
     if (!result) {

@@ -86,7 +86,7 @@ async function withAi(
 }
 
 /**
- * Completa pelo código de barras (Cosmos ou base gratuita) o que o dados.txt não trouxe.
+ * Completa pelo código de barras (bases gratuitas) o que o dados.txt não trouxe.
  * Sem fotos próprias, baixa as da base. Erro na busca vira aviso.
  */
 async function withBarcode(build: ReturnType<typeof buildDraft>, opts: { barcode: boolean; useAi: boolean }, hasPhotos: boolean) {
@@ -94,7 +94,7 @@ async function withBarcode(build: ReturnType<typeof buildDraft>, opts: { barcode
   const none = { build, warnings: [] as string[], photoUrls: [] as string[], reference: null as string | null };
   if (!opts.barcode || !d.ean) return none;
   try {
-    const r = await lookupBarcode(d.ean, (await getSettings()).catalog.cosmosToken);
+    const r = await lookupBarcode(d.ean);
     if (!r) return { ...none, warnings: [`Código ${d.ean} não encontrado nas bases.`] };
     // A UPCitemdb é americana (textos em inglês): com a IA, nome, cor e descrição dela só servem de consulta.
     const asReference = r.source === "UPCitemdb" && opts.useAi && !!(await getAiConfig());

@@ -120,7 +120,6 @@ export const aiSchema = z.object({
 // Ferramentas do catálogo: chaves do importador, calculadora de preço, padrão das fotos e feed.
 export const catalogSchema = z.object({
   googleDriveApiKey: str(""), // criptografado · importador de produtos
-  cosmosToken: str(""), // criptografado · busca por código de barras (Cosmos/Bluesoft)
   // Calculadora de preço: porcentagens sobre o preço de venda, valores fixos em centavos.
   feeCardPercent: z.number().min(0).max(30).default(4.99), // maquininha / cartão online
   feePixPercent: z.number().min(0).max(30).default(0),
@@ -196,7 +195,7 @@ export type CatalogSettings = Settings["catalog"];
 export const SECRET_FIELDS: { [K in SettingsGroup]?: string[] } = {
   integrations: ["stripeSecretKey", "stripeWebhookSecret", "mapsApiKey"],
   ai: ["geminiKey", "openaiKey", "anthropicKey", "deepseekKey", "xaiKey", "mistralKey", "openrouterKey", "customKey"],
-  catalog: ["googleDriveApiKey", "cosmosToken"],
+  catalog: ["googleDriveApiKey"],
   push: ["vapidPrivateKey"],
 };
 
